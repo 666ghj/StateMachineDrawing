@@ -1,280 +1,398 @@
 <!doctype html>
-<html><head>
-	<title>有限自动机快速在线绘制 | 郭同学的笔记本</title>
-  <meta charset="utf-8">
-      <!-- 设置网站icon -->
-	  <link
-      rel="icon"
-      href="https://lovexl-oss.oss-cn-beijing.aliyuncs.com/bed/%E5%A4%B4%E5%83%8F%E5%8E%BB%E8%83%8C%E6%99%AF.png"
-      type="image/x-icon"
+<html>
+<head>
+    <title>有限自动机快速在线绘制 | 郭同学的笔记本</title>
+    <meta charset="utf-8">
+    <!-- 设置网站icon -->
+    <link
+        rel="icon"
+        href="https://lovexl-oss.oss-cn-beijing.aliyuncs.com/bed/%E5%A4%B4%E5%83%8F%E5%8E%BB%E8%83%8C%E6%99%AF.png"
+        type="image/x-icon"
     />
-	<style>
+    <style>
 
 body {
-	text-align: center;
-	background: #DFDFDF;
-	margin: 0 30px 10px 30px;
-	font: 14px/18px 'Lucida Grande', 'Segoe UI', sans-serif;
+    text-align: center;
+    background: #DFDFDF;
+    margin: 0 30px 10px 30px;
+    font: 14px/18px 'Lucida Grande', 'Segoe UI', sans-serif;
 }
 
 h1 {
-	margin-top: 50px;
-	font-size: 50px;
+    margin-top: 50px;
+    font-size: 50px;
 }
 
 .zuozhe{
-	text-align: center;
-	font-size: larger;
-	font-weight: 500;
+    text-align: center;
+    font-size: larger;
+    font-weight: 500;
 }
 
 canvas {
-	display: block;
-	background: white;
-	border-radius: 20px;
-	-moz-border-radius: 20px;
-	margin: 10px auto;
-	box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.3); /* 添加阴影效果 */
+    display: block;
+    background: white;
+    border-radius: 20px;
+    -moz-border-radius: 20px;
+    margin: 10px auto;
+    box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.3); /* 添加阴影效果 */
 }
 
 a {
-	color: black;
+    color: black;
 }
 
 div {
-	margin: 30px auto;
-	text-align: left;
+    margin: 30px auto;
+    text-align: left;
 }
 
 .error {
-	display: block;
-	color: red;
-	font-size: 28px;
-	line-height: 30px;
-	padding: 30px;
+    display: block;
+    color: red;
+    font-size: 28px;
+    line-height: 30px;
+    padding: 30px;
 }
 
 p {
-	margin: 30px 0;
-	line-height: 20px;
+    margin: 30px 0;
+    line-height: 20px;
 }
 
 .center {
-	text-align: center;
+    text-align: center;
 }
 
 textarea {
-	display: none;
-	width: 75%;
-	height: 400px;
-	margin: 0 auto;
+    display: none;
+    width: 75%;
+    height: 400px;
+    margin: 0 auto;
 }
 
-  </style>
-	<script src="./fsm.js"></script>
-	<script>
+/* 新增的样式 */
+#canvas-container {
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+}
 
-/*
- * base64.js - Base64 编码和解码函数
- *
- * 参考: https://developer.mozilla.org/en-US/docs/Web/API/btoa
- *      https://developer.mozilla.org/en-US/docs/Web/API/atob
- *
- * Copyright (c) 2007, David Lindquist <david.lindquist@gmail.com>
- * 根据 MIT 许可证发布
- */
+#canvas-tabs {
+    text-align: center;
+    margin-bottom: 10px;
+}
 
-if (typeof btoa == 'undefined') {
-    function btoa(str) {
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-        var encoded = [];
-        var c = 0;
-        while (c < str.length) {
-            var b0 = str.charCodeAt(c++);
-            var b1 = str.charCodeAt(c++);
-            var b2 = str.charCodeAt(c++);
-            var buf = (b0 << 16) + ((b1 || 0) << 8) + (b2 || 0);
-            var i0 = (buf & (63 << 18)) >> 18;
-            var i1 = (buf & (63 << 12)) >> 12;
-            var i2 = isNaN(b1) ? 64 : (buf & (63 << 6)) >> 6;
-            var i3 = isNaN(b2) ? 64 : (buf & 63);
-            encoded[encoded.length] = chars.charAt(i0);
-            encoded[encoded.length] = chars.charAt(i1);
-            encoded[encoded.length] = chars.charAt(i2);
-            encoded[encoded.length] = chars.charAt(i3);
+#canvas-tabs button {
+    margin: 0 5px;
+}
+
+#canvas-area {
+    position: relative;
+    width: 800px;
+    margin: 0 auto;
+    min-height: 600px;
+}
+
+/* 确保 canvas-item 居中显示 */
+.canvas-item {
+    display: block;
+    margin: 0 auto;
+}
+
+.canvas-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.close-btn {
+    margin-left: 5px;
+    color: red;
+    cursor: pointer;
+}
+
+#canvas-tabs {
+    display: inline-flex; /* 使容器宽度根据内容自适应 */
+    justify-content: center;
+    align-items: center;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+    padding: 0 10px; /* 可根据需要调整左右内边距 */
+    margin-top: 0;
+    border-radius: 5px;
+}
+
+#canvas-tabs button {
+    margin: 0 5px;
+    padding: 10px 20px;
+    background-color: #e7e7e7;
+    border: none;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    font-size: 16px;
+}
+
+/* 鼠标悬停效果 */
+#canvas-tabs button:hover {
+    background-color: #ddd;
+}
+
+/* 当前选中的选项卡样式 */
+#canvas-tabs button.active {
+    background-color: #fff;
+    border-bottom: 2px solid #fff;
+    font-weight: bold;
+}
+
+/* 关闭按钮样式 */
+.close-btn {
+    margin-left: 5px;
+    color: red;
+    cursor: pointer;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    font-size: 12px;
+}
+
+#canvas-tabs button {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+    font-size: 16px;
+}
+
+#canvas-tabs button.active {
+    border-bottom: 2px solid #000;
+}
+
+
+      </style>
+    <script src="./fsm.js"></script>
+    <script>
+
+    /*
+     * base64.js - Base64 编码和解码函数
+     *
+     * 参考: https://developer.mozilla.org/en-US/docs/Web/API/btoa
+     *      https://developer.mozilla.org/en-US/docs/Web/API/atob
+     *
+     * Copyright (c) 2007, David Lindquist <david.lindquist@gmail.com>
+     * 根据 MIT 许可证发布
+     */
+
+    if (typeof btoa == 'undefined') {
+        function btoa(str) {
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+            var encoded = [];
+            var c = 0;
+            while (c < str.length) {
+                var b0 = str.charCodeAt(c++);
+                var b1 = str.charCodeAt(c++);
+                var b2 = str.charCodeAt(c++);
+                var buf = (b0 << 16) + ((b1 || 0) << 8) + (b2 || 0);
+                var i0 = (buf & (63 << 18)) >> 18;
+                var i1 = (buf & (63 << 12)) >> 12;
+                var i2 = isNaN(b1) ? 64 : (buf & (63 << 6)) >> 6;
+                var i3 = isNaN(b2) ? 64 : (buf & 63);
+                encoded[encoded.length] = chars.charAt(i0);
+                encoded[encoded.length] = chars.charAt(i1);
+                encoded[encoded.length] = chars.charAt(i2);
+                encoded[encoded.length] = chars.charAt(i3);
+            }
+            return encoded.join('');
         }
-        return encoded.join('');
     }
-}
 
-	</script>
-</head><body>
-	<h1>有限自动机快速在线绘制</h1>
-	<div class="zuozhe">Made By 小郭</div>
-	<canvas id="canvas" width="800" height="600">
-		<span class="error">您的浏览器不支持<br>HTML5的 &lt;canvas&gt; 元素</span>
-	</canvas>
-	<p class="center" style="margin-bottom: 0;">
-		画布调节: &nbsp;
-		<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a> |
-		<a href="javascript:enlargeCanvasHeight()">高度增加 50%</a> | 
-		<a href="javascript:enlargeCanvasWidth()" >宽度增加 50%</a> | 
-		<a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a>
-	</p>
-	<div style="margin-top: 10px;">
-		<p class="center" style="margin: 0;">
-			导出为:&nbsp;
-			<a href="javascript:saveAsPNG()">PNG</a> | 
-			<a href="javascript:saveAsSVG()">SVG</a> | 
-			<a href="javascript:saveAsLaTeX()">LaTeX</a> 
-		</p>
-		
-		<div class="center" style="text-align: center; padding: 20px;margin: 0;">
-			<p style="margin: 0; font-size: larger; font-weight: bolder;margin-top: 5px;">使用说明</p>
+    </script>
+</head>
+<body onload="addCanvas()">
+    <h1>有限自动机快速在线绘制</h1>
+    <div class="zuozhe">Made By 小郭</div>
+
+    <!-- 画布控制面板 -->
+    <div id="canvas-container">
+        <div id="canvas-tabs">
+            <button onclick="addCanvas()" >添加画布</button>
+            <span style="font-size: 25px;">|</span>
+        </div>
+        <div id="canvas-area">
+            <!-- 画布元素将被动态添加到这里 -->
+        </div>
+    </div>
+
+    <p class="center" style="margin-bottom: 0;">
+        画布调节: &nbsp;
+        <a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a> |
+        <a href="javascript:enlargeCanvasHeight()">高度增加 50%</a> | 
+        <a href="javascript:enlargeCanvasWidth()" >宽度增加 50%</a> | 
+        <a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a>
+    </p>
+    <div style="margin-top: 10px;">
+        <p class="center" style="margin: 0;">
+            导出为:&nbsp;
+            <a href="javascript:saveAsPNG()">PNG</a> | 
+            <a href="javascript:saveAsSVG()">SVG</a> | 
+            <a href="javascript:saveAsLaTeX()">LaTeX</a> 
+        </p>
+        
+        <div class="center" style="text-align: center; padding: 20px;margin: 0;">
+            <p style="margin: 0; font-size: larger; font-weight: bolder;margin-top: 5px;">使用说明</p>
             <p class="center" style="margin:0;margin-top: 5px;">
                 快捷键: &nbsp;
                 ctrl+C复制 | ctrl+V粘贴 | ctrl+Z撤销（这个真有点难先别急）
             </p>
-			<div style="display: inline-block; text-align: left; margin-top: -5px;">
-				<ul style="list-style-type: disc; padding-left: 20px;">
-					<li><b>添加状态：</b>双击画布</li>
-					<li><b>接受/正常状态转换：</b>再次双击已有状态</li>
-					<li><b>添加箭头：</b>按住Shift拖动画布（注意箭头必须指向一个状态才能存在）<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;要从节点往出拉线要先点节点然后再shift拉线</li>
-					<li><b>移动对象：</b>单击或框选对象后拖动</li>
-					<li><b>删除对象：</b>点击它然后按下Delete键（而不是Backspace键）</li>
-					<li><b>输入数字下标：</b>在数字前输入下划线（如 "S_0"）</li>
-					<li><b>输入希腊字母：</b>在字母前输入反斜杠（如 空串对应"\epsilon"）</li>
-				</ul>
-			</div>
-			<p style="margin: 0;">这是使用HTML5和JavaScript以及canvas元素制作的，所有内容均在你本地运行</p>
-			<p style="margin: 0;margin-top: 5px;">项目基于<a href="https://madebyevan.com/"> Evan Wallace </a>的作品改进，开源地址：<a href="https://github.com/666ghj/StateMachineDrawing">https://github.com/666ghj/StateMachineDrawing</a>，欢迎支持！</p>
-		</div>
-		
-		
+            <div style="display: inline-block; text-align: left; margin-top: -5px;">
+                <ul style="list-style-type: disc; padding-left: 20px;">
+                    <li><b>添加状态：</b>双击画布</li>
+                    <li><b>接受/正常状态转换：</b>再次双击已有状态</li>
+                    <li><b>添加箭头：</b>按住Shift拖动画布（注意箭头必须指向一个状态才能存在）<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;要从节点往出拉线要先点节点然后再shift拉线</li>
+                    <li><b>移动对象：</b>单击或框选对象后拖动</li>
+                    <li><b>删除对象：</b>点击它然后按下Delete键（而不是Backspace键）</li>
+                    <li><b>输入数字下标：</b>在数字前输入下划线（如 "S_0"）</li>
+                    <li><b>输入希腊字母：</b>在字母前输入反斜杠（如 空串对应"\epsilon"）</li>
+                </ul>
+            </div>
+            <p style="margin: 0;">这是使用HTML5和JavaScript以及canvas元素制作的，所有内容均在你本地运行</p>
+            <p style="margin: 0;margin-top: 5px;">项目基于<a href="https://madebyevan.com/"> Evan Wallace </a>的作品改进，开源地址：<a href="https://github.com/666ghj/StateMachineDrawing">https://github.com/666ghj/StateMachineDrawing</a>，欢迎支持！</p>
+        </div>
+    </div>
+    <div>
+        <p style="font-size: larger;font-weight: bolder;text-align: center;margin-bottom: -20px;">© 2024 郭同学的笔记本</p>
+        <div class="bottom">
+            <span><a href="https://beian.miit.gov.cn/" target="_blank">晋ICP备2024031692号</a></span>
+            <img src="https://lovexl-oss.oss-cn-beijing.aliyuncs.com/bed/202410101323993.png" alt="公安徽标" style="width: 25px; height: 25px; margin: 0 5px;" />
+            <span><a href="https://beian.gov.cn/portal/registerSystemInfo?recordcode=11010802000001" target="_blank">晋公网安备4090202000509号</a></span>
+        </div>
+    </div>
+    <div class="BtnDiv">
+        <button class="Btn">
+            <div class="sign"><svg viewBox="0 0 512 512">
+                    <path
+                        d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z">
+                    </path>
+                </svg></div>
 
-	</div>
-	<div>
-		<p style="font-size: larger;font-weight: bolder;text-align: center;margin-bottom: -20px;">© 2024 郭同学的笔记本</p>
-		<div class="bottom">
-			<span><a href="https://beian.miit.gov.cn/" target="_blank">晋ICP备2024031692号</a></span>
-			<img src="https://lovexl-oss.oss-cn-beijing.aliyuncs.com/bed/202410101323993.png" alt="公安徽标" style="width: 25px; height: 25px; margin: 0 5px;" />
-			<span><a href="https://beian.gov.cn/portal/registerSystemInfo?recordcode=11010802000001" target="_blank">晋公网安备4090202000509号</a></span>
-		</div>
-	</div>
-	<div class="BtnDiv">
-		<button class="Btn">
-			<div class="sign"><svg viewBox="0 0 512 512">
-					<path
-						d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z">
-					</path>
-				</svg></div>
+            <div class="text">返回博客</div>
+        </button>
+    </div>
 
-			<div class="text">返回博客</div>
-		</button>
-	</div>
-</body></html>
+    <!-- 添加返回博客的脚本 -->
+    <script>
+        document.querySelector('.Btn').addEventListener('click', function () {
+            window.location.href = 'https://lovexl.top/'
+        })
+    </script>
 
-<script>
-	document.querySelector('.Btn').addEventListener('click', function () {
-		window.location.href = 'https://lovexl.top/'
-	})
-</script>
-<style>
-	.bottom{
-		text-align: center;
-		padding-left: 40px;
-	}
-
-	li{
-		margin: 5px;
-	}
-</style>
-<style>
-    .BtnDiv {
-        position: fixed;
-        z-index: 9999;
-        width: 200px;
-        height: 200px;
-        /* 内部居中 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        bottom: 0;
-        right: -0px;
+    <!-- 原有的样式 -->
+    <style>
+    .bottom{
+        text-align: center;
+        padding-left: 40px;
     }
 
-    .Btn {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        width: 45px;
-        height: 45px;
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-        transition-duration: .3s;
-        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-        background-color: rgb(39, 52, 155);
-        position: fixed;
-		padding-left: 10px;
+    li{
+        margin: 5px;
     }
+    </style>
 
-    /* plus sign */
-    .sign {
-        width: 100%;
-        transition-duration: .3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+    <!-- 按钮的样式 -->
+    <style>
+        .BtnDiv {
+            position: fixed;
+            z-index: 9999;
+            width: 200px;
+            height: 200px;
+            /* 内部居中 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            bottom: 0;
+            right: -0px;
+        }
 
-    .sign svg {
-        width: 17px;
-    }
+        .Btn {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition-duration: .3s;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
+            background-color: rgb(39, 52, 155);
+            position: fixed;
+            padding-left: 10px;
+        }
 
-    .sign svg path {
-        fill: white;
-    }
+        /* plus sign */
+        .sign {
+            width: 100%;
+            transition-duration: .3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    /* text */
-    .text {
-        position: absolute;
-        /* 不换行 */
-        white-space: nowrap;
-        right: 0%;
-        width: 0%;
-        opacity: 0;
-        color: white;
-        font-size: 1.2em;
-        font-weight: 600;
-        transition-duration: .3s;
-    }
+        .sign svg {
+            width: 17px;
+        }
 
-    /* hover effect on button width */
-    .Btn:hover {
-        width: 125px;
-        border-radius: 40px;
-        transition-duration: .3s;
-    }
+        .sign svg path {
+            fill: white;
+        }
 
-    .Btn:hover .sign {
-        width: 25%;
-        transition-duration: .3s;
-        padding-left: 10px;
-		margin-right: 100px;
-    }
+        /* text */
+        .text {
+            position: absolute;
+            /* 不换行 */
+            white-space: nowrap;
+            right: 0%;
+            width: 0%;
+            opacity: 0;
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            transition-duration: .3s;
+        }
 
-    /* hover effect button's text */
-    .Btn:hover .text {
-        opacity: 1;
-        width: 70%;
-        transition-duration: .3s;
-    }
+        /* hover effect on button width */
+        .Btn:hover {
+            width: 125px;
+            border-radius: 40px;
+            transition-duration: .3s;
+        }
 
-    /* button click effect*/
-    .Btn:active {
-        transform: translate(2px, 2px);
-    }
-</style>
+        .Btn:hover .sign {
+            width: 25%;
+            transition-duration: .3s;
+            padding-left: 10px;
+            margin-right: 100px;
+        }
+
+        /* hover effect button's text */
+        .Btn:hover .text {
+            opacity: 1;
+            width: 70%;
+            transition-duration: .3s;
+        }
+
+        /* button click effect*/
+        .Btn:active {
+            transform: translate(2px, 2px);
+        }
+    </style>
+</body>
+</html>

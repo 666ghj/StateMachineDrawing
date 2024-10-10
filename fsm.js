@@ -35,11 +35,17 @@ var movingMultipleNodes = false;  // 追踪是否正在移动多个节点
 var selectedNodes = [];
 var selectedLinks = [];  // 记录被选中的连接线
 
+// 多画布功能
+let canvasList = [];
+let currentCanvasId = null;
+const maxCanvasCount = 10;
 
-function ExportAsLaTeX() {
-	this._points = [];
-	this._texData = '';
-	this._scale = 0.1; // to convert pixels to document space (TikZ breaks if the numbers get too big, above 500?)
+
+function ExportAsLaTeX(canvasData) {
+    this._points = [];
+    this._texData = '';
+    this._scale = 0.1;
+    this.canvasData = canvasData;
 
 	this.toLaTeX = function() {
 		return '\\documentclass[12pt]{article}\n' +
@@ -142,15 +148,16 @@ function ExportAsLaTeX() {
 }
 
 // draw using this instead of a canvas and call toSVG() afterward
-function ExportAsSVG() {
-	this.fillStyle = 'black';
-	this.strokeStyle = 'black';
-	this.lineWidth = 1;
-	this.font = '12px Arial, sans-serif';
-	this._points = [];
-	this._svgData = '';
-	this._transX = 0;
-	this._transY = 0;
+function ExportAsSVG(canvasData) {
+    this.fillStyle = 'black';
+    this.strokeStyle = 'black';
+    this.lineWidth = 1;
+    this.font = '12px Arial, sans-serif';
+    this._points = [];
+    this._svgData = '';
+    this._transX = 0;
+    this._transY = 0;
+    this.canvasData = canvasData;
 
 	this.toSVG = function() {
 		return '<?xml version="1.0" standalone="no"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "https://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n\n<svg width="800" height="600" version="1.1" xmlns="http://www.w3.org/2000/svg">\n' + this._svgData + '</svg>\n';
@@ -757,49 +764,50 @@ function canvasHasFocus() {
 }
 
 function drawText(c, originalText, x, y, angleOrNull, isSelected) {
-	text = convertLatexShortcuts(originalText);
-	c.font = '20px "Times New Roman", serif';
-	var width = c.measureText(text).width;
+    text = convertLatexShortcuts(originalText);
+    c.font = '20px "Times New Roman", serif';
+    var width = c.measureText(text).width;
 
-	// center the text
-	x -= width / 2;
+    // 居中文本
+    x -= width / 2;
 
-	// position the text intelligently if given an angle
-	if(angleOrNull != null) {
-		var cos = Math.cos(angleOrNull);
-		var sin = Math.sin(angleOrNull);
-		var cornerPointX = (width / 2 + 5) * (cos > 0 ? 1 : -1);
-		var cornerPointY = (10 + 5) * (sin > 0 ? 1 : -1);
-		var slide = sin * Math.pow(Math.abs(sin), 40) * cornerPointX - cos * Math.pow(Math.abs(cos), 10) * cornerPointY;
-		x += cornerPointX - sin * slide;
-		y += cornerPointY + cos * slide;
-	}
+    // 根据角度调整文本位置（如果有）
+    if (angleOrNull != null) {
+        var cos = Math.cos(angleOrNull);
+        var sin = Math.sin(angleOrNull);
+        var cornerPointX = (width / 2 + 5) * (cos > 0 ? 1 : -1);
+        var cornerPointY = (10 + 5) * (sin > 0 ? 1 : -1);
+        var slide = sin * Math.pow(Math.abs(sin), 40) * cornerPointX - cos * Math.pow(Math.abs(cos), 10) * cornerPointY;
+        x += cornerPointX - sin * slide;
+        y += cornerPointY + cos * slide;
+    }
 
-	// draw text and caret (round the coordinates so the caret falls on a pixel)
-	if('advancedFillText' in c) {
-		c.advancedFillText(text, originalText, x + width / 2, y, angleOrNull);
-	} else {
-		x = Math.round(x);
-		y = Math.round(y);
-		c.fillText(text, x, y + 6);
-		if(isSelected && caretVisible && canvasHasFocus() && document.hasFocus()) {
-			x += width;
-			c.beginPath();
-			c.moveTo(x, y - 10);
-			c.lineTo(x, y + 10);
-			c.stroke();
-		}
-	}
+    // 绘制文本和光标
+    x = Math.round(x);
+    y = Math.round(y);
+    c.fillText(text, x, y + 6);
+    if (isSelected && canvasData.caretVisible && canvasHasFocus() && document.hasFocus()) {
+        x += width;
+        c.beginPath();
+        c.moveTo(x, y - 10);
+        c.lineTo(x, y + 10);
+        c.stroke();
+    }
 }
+
 
 var caretTimer;
 var caretVisible = true;
 
 function resetCaret() {
-	clearInterval(caretTimer);
-	caretTimer = setInterval('caretVisible = !caretVisible; draw()', 500);
-	caretVisible = true;
+    clearInterval(canvasData.caretTimer);
+    canvasData.caretTimer = setInterval(function () {
+        canvasData.caretVisible = !canvasData.caretVisible;
+        draw();
+    }, 500);
+    canvasData.caretVisible = true;
 }
+
 
 var canvas;
 var nodeRadius = 30;
@@ -1198,57 +1206,61 @@ function output(text) {
 }
 
 function saveAsPNG() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        const canvas = currentCanvas.canvas;
+        const context = currentCanvas.context;
 
-    // 暂时取消选中对象的绘制
-    var oldSelectedObject = selectedObject;
-    selectedObject = null;
+        // 暂时取消选中对象的绘制
+        const oldSelectedObject = currentCanvas.data.selectedObject;
+        currentCanvas.data.selectedObject = null;
 
-    // 重新绘制画布内容
-    drawUsing(context);
+        // 重新绘制画布内容
+        currentCanvas.data.draw();
 
-    // 将当前画布转换为 PNG 数据
-    var pngData = canvas.toDataURL('image/png');
+        // 将当前画布转换为 PNG 数据
+        const pngData = canvas.toDataURL('image/png');
 
-    // 恢复选中对象
-    selectedObject = oldSelectedObject;
-    draw();  // 恢复选中对象后的画布绘制
+        // 恢复选中对象并重新绘制
+        currentCanvas.data.selectedObject = oldSelectedObject;
+        currentCanvas.data.draw();
 
-    // 创建一个临时的 <a> 元素
-    var link = document.createElement('a');
-    link.href = pngData;
-    link.download = '我爱小郭.png';  // 设置下载文件名
-
-    // 将这个链接插入到 DOM 中，并模拟点击以触发下载
-    document.body.appendChild(link);
-    link.click();
-
-    // 移除临时的 <a> 元素
-    document.body.removeChild(link);
+        // 创建一个临时的 <a> 元素并触发下载
+        const link = document.createElement('a');
+        link.href = pngData;
+        link.download = 'fsm.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 function saveAsSVG() {
-	var exporter = new ExportAsSVG();
-	var oldSelectedObject = selectedObject;
-	selectedObject = null;
-	drawUsing(exporter);
-	selectedObject = oldSelectedObject;
-	var svgData = exporter.toSVG();
-	output(svgData);
-	// Chrome isn't ready for this yet, the 'Save As' menu item is disabled
-	// document.location.href = 'data:image/svg+xml;base64,' + btoa(svgData);
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        const exporter = new ExportAsSVG(currentCanvas.data);
+        const oldSelectedObject = currentCanvas.data.selectedObject;
+        currentCanvas.data.selectedObject = null;
+        currentCanvas.data.drawUsing(exporter);
+        currentCanvas.data.selectedObject = oldSelectedObject;
+        const svgData = exporter.toSVG();
+        output(svgData);
+    }
 }
 
 function saveAsLaTeX() {
-	var exporter = new ExportAsLaTeX();
-	var oldSelectedObject = selectedObject;
-	selectedObject = null;
-	drawUsing(exporter);
-	selectedObject = oldSelectedObject;
-	var texData = exporter.toLaTeX();
-	output(texData);
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        const exporter = new ExportAsLaTeX(currentCanvas.data);
+        const oldSelectedObject = currentCanvas.data.selectedObject;
+        currentCanvas.data.selectedObject = null;
+        currentCanvas.data.drawUsing(exporter);
+        currentCanvas.data.selectedObject = oldSelectedObject;
+        const texData = exporter.toLaTeX();
+        output(texData);
+    }
 }
+
 function clearCanvas() {
     nodes = [];
     links = [];
@@ -1262,73 +1274,120 @@ const initialHeight = 600;
 
 // 重置画布的尺寸为初始值，并提示用户确认
 function resetCanvasSize() {
-    var userConfirmed = confirm("重置画布尺寸将清空内容，该操作无法撤销！");
+    var userConfirmed = confirm("重置画布尺寸将清空当前画布内容，该操作无法撤销！");
     if (userConfirmed) {
-        var canvas = document.getElementById('canvas');
-        var context = canvas.getContext('2d');
+        const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+        if (currentCanvas) {
+            const canvas = currentCanvas.canvas;
+            const context = currentCanvas.context;
 
-        // 重置宽度和高度为初始值
-        canvas.width = initialWidth;
-        canvas.height = initialHeight;
+            // 重置宽度和高度为初始值
+            canvas.width = initialWidth;
+            canvas.height = initialHeight;
 
-        // 重新设置画布样式
-        canvas.style.width = initialWidth + "px";
-        canvas.style.height = initialHeight + "px";
+            // 更新画布样式
+            canvas.style.width = initialWidth + "px";
+            canvas.style.height = initialHeight + "px";
 
-        // 清空画布内容
-        context.clearRect(0, 0, canvas.width, canvas.height);
+            // 更新 #canvas-area 的宽度和高度
+            const canvasArea = document.getElementById('canvas-area');
+            canvasArea.style.width = canvas.width + "px";
+            canvasArea.style.height = canvas.height + "px";
 
-        // 清空节点和链接数组
-        nodes = [];
-        links = [];
-        selectedObject = null;
+            // 清空画布内容
+            context.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 重新绘制清空后的画布
-        draw();
+            // 清空节点和链接数组
+            currentCanvas.data.nodes = [];
+            currentCanvas.data.links = [];
+            currentCanvas.data.selectedObject = null;
+            currentCanvas.data.selectedNodes = [];
+            currentCanvas.data.selectedLinks = [];
+
+            // 重新绘制清空后的画布
+            currentCanvas.data.draw();
+        }
     }
 }
 
-
 // 只增加画布的高度50%
 function enlargeCanvasHeight() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        const canvas = currentCanvas.canvas;
+        const context = currentCanvas.context;
 
-    // 保存当前图像
-    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        // 保存当前图像
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
-    // 增加50%的高度
-    var oldHeight = canvas.height;
-    canvas.height = oldHeight * 1.5;
+        // 增加50%的高度
+        const oldHeight = canvas.height;
+        canvas.height = oldHeight * 1.5;
 
-    // 重新设置画布样式
-    canvas.style.height = canvas.height + "px";
+        // 更新画布样式
+        canvas.style.height = canvas.height + "px";
 
-    // 重新绘制之前的图像，不改变图像的大小和位置
-    context.putImageData(imageData, 0, 0);
+        // 更新 #canvas-area 的高度
+        const canvasArea = document.getElementById('canvas-area');
+        canvasArea.style.height = canvas.height + "px";
 
-    draw();  // 如果有额外的绘制操作需要执行
+        // 计算上下增加的高度
+        const offsetY = (canvas.height - oldHeight) / 2;
+
+        // 清空画布
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 重新绘制之前的图像，使内容居中
+        context.putImageData(imageData, 0, offsetY);
+
+        // 调整所有节点的位置，使其与画布居中
+        currentCanvas.data.nodes.forEach(node => {
+            node.y += offsetY;
+        });
+
+        // 重新绘制画布元素
+        currentCanvas.data.draw();
+    }
 }
 
-// 只增加画布的宽度50%
+// 增加画布的宽度50%，左右各增加一半
 function enlargeCanvasWidth() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        const canvas = currentCanvas.canvas;
+        const context = currentCanvas.context;
 
-    // 保存当前图像
-    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        // 保存当前图像
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
-    // 增加50%的宽度
-    var oldWidth = canvas.width;
-    canvas.width = oldWidth * 1.5;
+        // 增加50%的宽度
+        const oldWidth = canvas.width;
+        canvas.width = oldWidth * 1.5;
 
-    // 重新设置画布样式
-    canvas.style.width = canvas.width + "px";
+        // 更新画布样式
+        canvas.style.width = canvas.width + "px";
 
-    // 重新绘制之前的图像，并保持左右两边扩展
-    context.putImageData(imageData, (canvas.width - oldWidth) / 2, 0);
+        // 更新 #canvas-area 的宽度
+        const canvasArea = document.getElementById('canvas-area');
+        canvasArea.style.width = canvas.width + "px";
 
-    draw();  // 如果有额外的绘制操作需要执行
+        // 计算左右增加的宽度
+        const offsetX = (canvas.width - oldWidth) / 2;
+
+        // 清空画布
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 重新绘制之前的图像，使内容居中
+        context.putImageData(imageData, offsetX, 0);
+
+        // 调整所有节点的位置，使其与画布居中
+        currentCanvas.data.nodes.forEach(node => {
+            node.x += offsetX;
+        });
+
+        // 重新绘制画布元素
+        currentCanvas.data.draw();
+    }
 }
 
 // 框选复制、删除的功能
@@ -1527,4 +1586,708 @@ function handleDelete() {
     }
 }
 
+// 新增添加画布的函数
+function addCanvas() {
+    if (canvasList.length >= maxCanvasCount) {
+        alert(`最多只能有${maxCanvasCount}个画布！`);
+        return;
+    }
+
+    const canvasId = `canvas-${Date.now()}`;
+    currentCanvasId = canvasId;
+
+    // 创建画布元素
+    const canvas = document.createElement('canvas');
+    canvas.id = canvasId;
+    canvas.width = initialWidth;
+    canvas.height = initialHeight;
+    canvas.className = 'canvas-item';
+
+    // 创建选项卡按钮
+    const tabButton = document.createElement('button');
+    tabButton.innerText = `画布 ${canvasList.length + 1}`;
+    tabButton.id = `tab-${canvasId}`;
+    tabButton.dataset.canvasId = canvasId; // 存储画布ID
+    tabButton.onclick = () => switchCanvas(canvasId);
+
+    // 创建关闭按钮
+    const closeButton = document.createElement('span');
+    closeButton.innerText = ' ×';
+    closeButton.className = 'close-btn';
+    closeButton.onclick = (e) => {
+        e.stopPropagation();
+        removeCanvas(canvasId);
+    };
+
+    // 将关闭按钮添加到选项卡按钮
+    tabButton.appendChild(closeButton);
+
+    // 将画布和选项卡添加到页面
+    document.getElementById('canvas-area').appendChild(canvas);
+    document.getElementById('canvas-tabs').appendChild(tabButton);
+
+
+    // 更新 #canvas-area 的宽度和高度
+    const canvasArea = document.getElementById('canvas-area');
+    canvasArea.style.width = canvas.width + "px";
+    canvasArea.style.height = canvas.height + "px";
+
+    // 更新画布列表
+    canvasList.push({
+        id: canvasId,
+        canvas: canvas,
+        context: canvas.getContext('2d'),
+        data: {} // 存储绘图数据
+    });
+
+    // 初始化画布
+    initCanvas(canvasId);
+
+    // 切换到新画布
+    switchCanvas(canvasId);
+}
+
+// 新增移除画布的函数
+function removeCanvas(canvasId) {
+    // 从画布列表中移除
+    canvasList = canvasList.filter(item => item.id !== canvasId);
+
+    // 移除画布元素
+    const canvasElement = document.getElementById(canvasId);
+    if (canvasElement) {
+        canvasElement.parentNode.removeChild(canvasElement);
+    }
+
+    // 移除选项卡按钮
+    const tabButton = document.getElementById(`tab-${canvasId}`);
+    if (tabButton) {
+        tabButton.parentNode.removeChild(tabButton);
+    }
+
+    // 如果移除的是当前画布，切换到其他画布
+    if (currentCanvasId === canvasId) {
+        if (canvasList.length > 0) {
+            switchCanvas(canvasList[0].id);
+        } else {
+            currentCanvasId = null;
+            // 清空 #canvas-area 的尺寸
+            const canvasArea = document.getElementById('canvas-area');
+            canvasArea.style.width = '0px';
+            canvasArea.style.height = '0px';
+        }
+    }
+}
+
+// 修改或新增初始化画布的函数
+function initCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+
+    // 初始化每个画布的变量
+    const canvasData = {
+        canvas: canvas,
+        context: ctx,
+        nodes: [],
+        links: [],
+        selectedObject: null,
+        currentLink: null,
+        selectionStart: null,
+        selectionEnd: null,
+        selectedNodes: [],
+        selectedLinks: [],
+        movingObject: false,
+        movingMultipleNodes: false,
+        originalClick: null,
+        shift: false,
+        clipboard: {
+            nodes: [],
+            links: []
+        },
+        caretVisible: true,
+        caretTimer: null
+    };
+
+    // 将 canvasData 存储到 canvasList 中
+    const canvasItem = canvasList.find(item => item.id === canvasId);
+    if (canvasItem) {
+        canvasItem.data = canvasData;
+    } else {
+        console.error('Canvas not found in canvasList');
+        return;
+    }
+
+    // 定义绘制函数
+    function draw() {
+        const c = canvasData.context;
+        c.clearRect(0, 0, canvas.width, canvas.height);
+        c.save();
+        c.translate(0.5, 0.5);
+
+        // 绘制节点
+        for (let i = 0; i < canvasData.nodes.length; i++) {
+            c.lineWidth = 1;
+            const node = canvasData.nodes[i];
+            const isSelectedNode = canvasData.selectedNodes.includes(node) || node === canvasData.selectedObject;
+            c.strokeStyle = isSelectedNode ? 'blue' : 'black';
+            node.draw(c, canvasData);
+        }
+
+        // 绘制连接线
+        for (let i = 0; i < canvasData.links.length; i++) {
+            c.lineWidth = 1;
+            const link = canvasData.links[i];
+            const isSelectedLink = canvasData.selectedLinks.includes(link) || link === canvasData.selectedObject;
+            c.strokeStyle = isSelectedLink ? 'blue' : 'black';
+            c.fillStyle = isSelectedLink ? 'blue' : 'black';
+            link.draw(c, canvasData);
+        }
+
+        // 绘制当前连接线
+        if (canvasData.currentLink != null) {
+            c.lineWidth = 1;
+            c.strokeStyle = 'black';
+            c.fillStyle = 'black';
+            canvasData.currentLink.draw(c, canvasData);
+        }
+
+        // 绘制选择框
+        if (canvasData.selectionStart && canvasData.selectionEnd) {
+            c.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+            c.lineWidth = 2;
+            c.strokeRect(
+                canvasData.selectionStart.x,
+                canvasData.selectionStart.y,
+                canvasData.selectionEnd.x - canvasData.selectionStart.x,
+                canvasData.selectionEnd.y - canvasData.selectionStart.y
+            );
+        }
+
+        c.restore();
+    }
+
+    // 重置光标闪烁
+    function resetCaret() {
+        clearInterval(canvasData.caretTimer);
+        canvasData.caretTimer = setInterval(function () {
+            canvasData.caretVisible = !canvasData.caretVisible;
+            draw();
+        }, 500);
+        canvasData.caretVisible = true;
+    }
+
+    // 选择对象
+    function selectObject(x, y) {
+        for (let i = 0; i < canvasData.nodes.length; i++) {
+            if (canvasData.nodes[i].containsPoint(x, y)) {
+                return canvasData.nodes[i];
+            }
+        }
+        for (let i = 0; i < canvasData.links.length; i++) {
+            if (canvasData.links[i].containsPoint(x, y)) {
+                return canvasData.links[i];
+            }
+        }
+        return null;
+    }
+
+    // 节点吸附功能
+    function snapNode(node) {
+        for (let i = 0; i < canvasData.nodes.length; i++) {
+            if (canvasData.nodes[i] === node) continue;
+
+            if (Math.abs(node.x - canvasData.nodes[i].x) < snapToPadding) {
+                node.x = canvasData.nodes[i].x;
+            }
+
+            if (Math.abs(node.y - canvasData.nodes[i].y) < snapToPadding) {
+                node.y = canvasData.nodes[i].y;
+            }
+        }
+    }
+
+    // 获取鼠标相对于画布的坐标
+    function crossBrowserRelativeMousePos(e) {
+        const element = canvas;
+        const rect = element.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    // 处理复制功能
+    function handleCopy() {
+        if (canvasData.selectedNodes.length > 0 || canvasData.selectedLinks.length > 0) {
+            canvasData.clipboard.nodes = [];
+            canvasData.clipboard.links = [];
+            const nodeMap = new Map();
+
+            // 复制节点
+            canvasData.selectedNodes.forEach(function (node) {
+                const copiedNode = new Node(node.x, node.y);
+                copiedNode.text = node.text;
+                copiedNode.isAcceptState = node.isAcceptState;
+                canvasData.clipboard.nodes.push(copiedNode);
+                nodeMap.set(node, copiedNode);
+            });
+
+            // 复制连接线
+            canvasData.selectedLinks.forEach(function (link) {
+                let copiedLink = null;
+
+                if (link instanceof SelfLink) {
+                    const newNode = nodeMap.get(link.node);
+                    if (newNode) {
+                        copiedLink = new SelfLink(newNode);
+                        copiedLink.text = link.text;
+                        copiedLink.anchorAngle = link.anchorAngle;
+                    }
+                } else if (link instanceof StartLink) {
+                    const newNode = nodeMap.get(link.node);
+                    if (newNode) {
+                        copiedLink = new StartLink(newNode);
+                        copiedLink.text = link.text;
+                        copiedLink.deltaX = link.deltaX;
+                        copiedLink.deltaY = link.deltaY;
+                    }
+                } else if (link instanceof Link) {
+                    const newNodeA = nodeMap.get(link.nodeA);
+                    const newNodeB = nodeMap.get(link.nodeB);
+                    if (newNodeA && newNodeB) {
+                        copiedLink = new Link(newNodeA, newNodeB);
+                        copiedLink.text = link.text;
+                        copiedLink.lineAngleAdjust = link.lineAngleAdjust;
+                        copiedLink.parallelPart = link.parallelPart;
+                        copiedLink.perpendicularPart = link.perpendicularPart;
+                    }
+                }
+
+                if (copiedLink) {
+                    canvasData.clipboard.links.push(copiedLink);
+                }
+            });
+        }
+    }
+
+    // 处理粘贴功能
+    function handlePaste() {
+        if (canvasData.clipboard.nodes.length > 0) {
+            const nodeMap = new Map();
+            const offsetX = 20;
+            const offsetY = 20;
+
+            canvasData.selectedNodes = [];
+            canvasData.selectedLinks = [];
+
+            // 粘贴节点
+            canvasData.clipboard.nodes.forEach(function (copiedNode) {
+                const newNode = new Node(copiedNode.x + offsetX, copiedNode.y + offsetY);
+                newNode.text = copiedNode.text;
+                newNode.isAcceptState = copiedNode.isAcceptState;
+                canvasData.nodes.push(newNode);
+                nodeMap.set(copiedNode, newNode);
+                canvasData.selectedNodes.push(newNode);
+            });
+
+            // 粘贴连接线
+            canvasData.clipboard.links.forEach(function (copiedLink) {
+                let newLink = null;
+
+                if (copiedLink instanceof SelfLink) {
+                    const newNode = nodeMap.get(copiedLink.node);
+                    if (newNode) {
+                        newLink = new SelfLink(newNode);
+                        newLink.text = copiedLink.text;
+                        newLink.anchorAngle = copiedLink.anchorAngle;
+                    }
+                } else if (copiedLink instanceof StartLink) {
+                    const newNode = nodeMap.get(copiedLink.node);
+                    if (newNode) {
+                        newLink = new StartLink(newNode);
+                        newLink.text = copiedLink.text;
+                        newLink.deltaX = copiedLink.deltaX;
+                        newLink.deltaY = copiedLink.deltaY;
+                    }
+                } else if (copiedLink instanceof Link) {
+                    const newNodeA = nodeMap.get(copiedLink.nodeA);
+                    const newNodeB = nodeMap.get(copiedLink.nodeB);
+                    if (newNodeA && newNodeB) {
+                        newLink = new Link(newNodeA, newNodeB);
+                        newLink.text = copiedLink.text;
+                        newLink.lineAngleAdjust = copiedLink.lineAngleAdjust;
+                        newLink.parallelPart = copiedLink.parallelPart;
+                        newLink.perpendicularPart = copiedLink.perpendicularPart;
+                    }
+                }
+
+                if (newLink) {
+                    canvasData.links.push(newLink);
+                    canvasData.selectedLinks.push(newLink);
+                }
+            });
+
+            draw();
+        }
+    }
+
+    // 处理删除功能
+    function handleDelete() {
+        if (canvasData.selectedNodes.length > 0 || canvasData.selectedLinks.length > 0) {
+            // 删除选中的节点
+            canvasData.selectedNodes.forEach(function (node) {
+                const index = canvasData.nodes.indexOf(node);
+                if (index > -1) {
+                    canvasData.nodes.splice(index, 1);
+                }
+                // 删除与该节点相关的连接线
+                canvasData.links = canvasData.links.filter(function (link) {
+                    return !(link.node === node || link.nodeA === node || link.nodeB === node);
+                });
+            });
+
+            // 删除选中的连接线
+            canvasData.selectedLinks.forEach(function (link) {
+                const index = canvasData.links.indexOf(link);
+                if (index > -1) {
+                    canvasData.links.splice(index, 1);
+                }
+            });
+
+            // 清空选中状态
+            canvasData.selectedNodes = [];
+            canvasData.selectedLinks = [];
+            canvasData.selectedObject = null;
+
+            draw();
+        } else if (canvasData.selectedObject != null) {
+            // 删除单个选中的对象
+            if (canvasData.selectedObject instanceof Node) {
+                const index = canvasData.nodes.indexOf(canvasData.selectedObject);
+                if (index > -1) {
+                    canvasData.nodes.splice(index, 1);
+                }
+                // 删除与该节点相关的连接线
+                canvasData.links = canvasData.links.filter(function (link) {
+                    return !(link.node === canvasData.selectedObject || link.nodeA === canvasData.selectedObject || link.nodeB === canvasData.selectedObject);
+                });
+            } else if (
+                canvasData.selectedObject instanceof Link ||
+                canvasData.selectedObject instanceof SelfLink ||
+                canvasData.selectedObject instanceof StartLink
+            ) {
+                const index = canvasData.links.indexOf(canvasData.selectedObject);
+                if (index > -1) {
+                    canvasData.links.splice(index, 1);
+                }
+            }
+
+            canvasData.selectedObject = null;
+            draw();
+        }
+    }
+
+    // 事件处理函数
+    canvas.onmousedown = function (e) {
+        const mouse = crossBrowserRelativeMousePos(e);
+        canvasData.selectedObject = selectObject(mouse.x, mouse.y);
+        canvasData.movingObject = false;
+        canvasData.originalClick = mouse;
+
+        if (canvasData.selectedObject != null) {
+            // 如果点击到的是边或者节点的一部分且该元素被框选，则准备整体移动
+            if (!canvasData.selectedNodes.includes(canvasData.selectedObject) && !canvasData.selectedLinks.includes(canvasData.selectedObject)) {
+                // 点击的是未选中区域的元素，清空选中状态
+                canvasData.selectedNodes = [];
+                canvasData.selectedLinks = [];
+
+                // 根据选中的对象类型，将其添加到相应的数组中
+                if (canvasData.selectedObject instanceof Node) {
+                    canvasData.selectedNodes.push(canvasData.selectedObject);
+                } else if (canvasData.selectedObject instanceof Link) {
+                    canvasData.selectedLinks.push(canvasData.selectedObject);
+                }
+            }
+
+            if (canvasData.shift && canvasData.selectedObject instanceof Node) {
+                canvasData.currentLink = new SelfLink(canvasData.selectedObject, mouse);
+            } else if (canvasData.selectedObject instanceof Node && canvasData.selectedNodes.includes(canvasData.selectedObject)) {
+                // 点击的是框选区域中的节点，开始整体移动
+                canvasData.movingMultipleNodes = true;
+                canvas.style.cursor = 'grab'; // 更改鼠标指针为手型
+                canvasData.originalClick = mouse;
+            } else {
+                canvasData.movingObject = true;
+                if (canvasData.selectedObject.setMouseStart) {
+                    canvasData.selectedObject.setMouseStart(mouse.x, mouse.y);
+                    canvas.style.cursor = 'grab'; // 更改鼠标指针为手型
+                }
+            }
+            resetCaret();
+        } else if (canvasData.shift) {
+            canvasData.currentLink = new TemporaryLink(mouse, mouse);
+        } else {
+            // 没有点击任何选中对象，开始框选操作
+            canvasData.selectionStart = mouse;
+            canvasData.selectionEnd = mouse;
+            canvasData.selectedNodes = [];
+            canvasData.selectedLinks = [];
+        }
+
+        draw();
+
+        if (canvasHasFocus()) {
+            resetCaret();
+            return false; // 禁止拖放行为
+        } else {
+            resetCaret();
+            return true;
+        }
+    };
+
+    canvas.onmousemove = function (e) {
+        const mouse = crossBrowserRelativeMousePos(e);
+
+        if (canvasData.selectionStart) {
+            // 更新选择框结束点
+            canvasData.selectionEnd = mouse;
+            draw(); // 实时绘制选择框
+        } else if (canvasData.movingMultipleNodes) {
+            if (canvasData.selectedNodes.length === 1) {
+                // 只有一个节点被选中，按照单个节点移动处理
+                const node = canvasData.selectedNodes[0];
+                node.x += mouse.x - canvasData.originalClick.x;
+                node.y += mouse.y - canvasData.originalClick.y;
+
+                // 启用吸附对齐功能
+                snapNode(node);
+
+                canvasData.originalClick = mouse; // 更新点击位置
+                canvas.style.cursor = 'grabbing'; // 拖动时的手型
+                draw();
+            } else if (canvasData.selectedNodes.length > 1) {
+                // 移动多个选中的节点，关闭吸附对齐
+                const dx = mouse.x - canvasData.originalClick.x;
+                const dy = mouse.y - canvasData.originalClick.y;
+
+                // 移动框选的所有节点
+                for (let i = 0; i < canvasData.selectedNodes.length; i++) {
+                    canvasData.selectedNodes[i].x += dx;
+                    canvasData.selectedNodes[i].y += dy;
+                }
+
+                canvasData.originalClick = mouse; // 更新点击位置
+                canvas.style.cursor = 'grabbing'; // 拖动时的手型
+                draw();
+            }
+        } else if (canvasData.movingObject) {
+            // 移动单个对象
+            canvasData.selectedObject.setAnchorPoint(mouse.x, mouse.y);
+            if (canvasData.selectedObject instanceof Node) {
+                snapNode(canvasData.selectedObject); // 保持单个节点移动时的吸附功能
+            }
+            canvas.style.cursor = 'grabbing'; // 拖动边时的手型
+            draw();
+        } else if (canvasData.currentLink) {
+            // 如果是链接
+            let targetNode = selectObject(mouse.x, mouse.y);
+            if (!(targetNode instanceof Node)) {
+                targetNode = null;
+            }
+
+            if (canvasData.selectedObject == null) {
+                if (targetNode != null) {
+                    canvasData.currentLink = new StartLink(targetNode, canvasData.originalClick);
+                } else {
+                    canvasData.currentLink = new TemporaryLink(canvasData.originalClick, mouse);
+                }
+            } else {
+                if (targetNode == canvasData.selectedObject) {
+                    canvasData.currentLink = new SelfLink(canvasData.selectedObject, mouse);
+                } else if (targetNode != null) {
+                    canvasData.currentLink = new Link(canvasData.selectedObject, targetNode);
+                } else {
+                    canvasData.currentLink = new TemporaryLink(canvasData.selectedObject.closestPointOnCircle(mouse.x, mouse.y), mouse);
+                }
+            }
+            draw();
+        }
+    };
+
+    canvas.onmouseup = function (e) {
+        canvasData.movingObject = false;
+        canvasData.movingMultipleNodes = false;
+
+        // 恢复鼠标指针为默认样式
+        canvas.style.cursor = 'default';
+
+        if (canvasData.selectionStart) {
+            // 计算矩形框的范围
+            const x1 = Math.min(canvasData.selectionStart.x, canvasData.selectionEnd.x);
+            const y1 = Math.min(canvasData.selectionStart.y, canvasData.selectionEnd.y);
+            const x2 = Math.max(canvasData.selectionStart.x, canvasData.selectionEnd.x);
+            const y2 = Math.max(canvasData.selectionStart.y, canvasData.selectionEnd.y);
+
+            // 判断哪些节点在框选区域内
+            for (let i = 0; i < canvasData.nodes.length; i++) {
+                if (canvasData.nodes[i].x >= x1 && canvasData.nodes[i].x <= x2 && canvasData.nodes[i].y >= y1 && canvasData.nodes[i].y <= y2) {
+                    canvasData.selectedNodes.push(canvasData.nodes[i]); // 将节点加入选中列表
+                }
+            }
+
+            // 检查节点之间的连接线
+            canvasData.selectedLinks = [];
+            for (let i = 0; i < canvasData.links.length; i++) {
+                const link = canvasData.links[i];
+
+                if (link instanceof SelfLink || link instanceof StartLink) {
+                    // 如果是自环边或起始边，且关联的节点被选中，则高亮
+                    if (canvasData.selectedNodes.includes(link.node)) {
+                        canvasData.selectedLinks.push(link);
+                    }
+                } else if (link instanceof Link) {
+                    // 如果是普通的连接线，只要任一端的节点被选中，就高亮
+                    if (canvasData.selectedNodes.includes(link.nodeA) || canvasData.selectedNodes.includes(link.nodeB)) {
+                        canvasData.selectedLinks.push(link);
+                    }
+                }
+            }
+
+            // 清除框选的状态
+            canvasData.selectionStart = null;
+            canvasData.selectionEnd = null;
+            draw(); // 重新绘制
+        }
+
+        if (canvasData.currentLink != null) {
+            if (!(canvasData.currentLink instanceof TemporaryLink)) {
+                canvasData.selectedObject = canvasData.currentLink;
+                canvasData.links.push(canvasData.currentLink);
+                resetCaret();
+            }
+            canvasData.currentLink = null;
+            draw();
+        }
+    };
+
+    canvas.ondblclick = function (e) {
+        const mouse = crossBrowserRelativeMousePos(e);
+        canvasData.selectedObject = selectObject(mouse.x, mouse.y);
+
+        if (canvasData.selectedObject == null) {
+            canvasData.selectedObject = new Node(mouse.x, mouse.y);
+            canvasData.nodes.push(canvasData.selectedObject);
+            resetCaret();
+            draw();
+        } else if (canvasData.selectedObject instanceof Node) {
+            canvasData.selectedObject.isAcceptState = !canvasData.selectedObject.isAcceptState;
+            draw();
+        }
+    };
+
+    // 键盘事件监听
+    document.addEventListener('keydown', function (e) {
+        const key = crossBrowserKey(e);
+
+        if (key == 16) {
+            canvasData.shift = true;
+        } else if (!canvasHasFocus()) {
+            return true;
+        } else if (e.ctrlKey && key == 67) {
+            handleCopy();
+            e.preventDefault();
+        } else if (e.ctrlKey && key == 86) {
+            handlePaste();
+            e.preventDefault();
+        } else if (key == 46) {
+            handleDelete();
+            e.preventDefault();
+        } else if (key == 8) {
+            if (canvasData.selectedObject != null && 'text' in canvasData.selectedObject) {
+                canvasData.selectedObject.text = canvasData.selectedObject.text.substr(0, canvasData.selectedObject.text.length - 1);
+                resetCaret();
+                draw();
+            }
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('keyup', function (e) {
+        const key = crossBrowserKey(e);
+
+        if (key == 16) {
+            canvasData.shift = false;
+        }
+    });
+
+    document.addEventListener('keypress', function (e) {
+        const key = crossBrowserKey(e);
+        if (!canvasHasFocus()) {
+            return true;
+        } else if (
+            key >= 0x20 &&
+            key <= 0x7e &&
+            !e.metaKey &&
+            !e.altKey &&
+            !e.ctrlKey &&
+            canvasData.selectedObject != null &&
+            'text' in canvasData.selectedObject
+        ) {
+            canvasData.selectedObject.text += String.fromCharCode(key);
+            resetCaret();
+            draw();
+            e.preventDefault();
+        } else if (key == 8) {
+            e.preventDefault();
+        }
+    });
+
+    // 初次绘制
+    draw();
+}
+
+
+function clearCanvas() {
+    const currentCanvas = canvasList.find(item => item.id === currentCanvasId);
+    if (currentCanvas) {
+        // 清空当前画布的上下文
+        currentCanvas.context.clearRect(0, 0, currentCanvas.canvas.width, currentCanvas.canvas.height);
+        // 重置画布数据
+        currentCanvas.data.nodes = [];
+        currentCanvas.data.links = [];
+        currentCanvas.data.selectedObject = null;
+        currentCanvas.data.selectedNodes = [];
+        currentCanvas.data.selectedLinks = [];
+        // 重新绘制画布
+        currentCanvas.data.draw();
+    }
+}
+
+function switchCanvas(canvasId) {
+    // 隐藏所有画布
+    canvasList.forEach(item => {
+        item.canvas.style.display = 'none';
+    });
+
+    // 显示选中的画布
+    const selectedCanvas = canvasList.find(item => item.id === canvasId);
+    if (selectedCanvas) {
+        selectedCanvas.canvas.style.display = 'block';
+        currentCanvasId = canvasId;
+
+        // 更新 #canvas-area 的宽度和高度
+        const canvasArea = document.getElementById('canvas-area');
+        canvasArea.style.width = selectedCanvas.canvas.width + 'px';
+        canvasArea.style.height = selectedCanvas.canvas.height + 'px';
+    }
+
+    // 更新选项卡按钮的样式
+    const tabButtons = document.querySelectorAll('#canvas-tabs button');
+    tabButtons.forEach(button => {
+        if (button.dataset.canvasId === canvasId) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
 
