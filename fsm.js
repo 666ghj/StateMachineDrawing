@@ -1033,12 +1033,17 @@ window.onload = function() {
 			selectedLinks = [];
 			for (var i = 0; i < links.length; i++) {
 				var link = links[i];
-				if (link instanceof SelfLink) {
+	
+				if (link instanceof SelfLink || link instanceof StartLink) {
+					// 如果是自环边或起始边，且关联的节点被选中，则高亮
 					if (selectedNodes.includes(link.node)) {
-						selectedLinks.push(link);  // 高亮自环边
+						selectedLinks.push(link);
 					}
-				} else if (selectedNodes.includes(link.nodeA) && selectedNodes.includes(link.nodeB)) {
-					selectedLinks.push(link);  // 高亮连接线
+				} else if (link instanceof Link) {
+					// 如果是普通的连接线，只要任一端的节点被选中，就高亮
+					if (selectedNodes.includes(link.nodeA) || selectedNodes.includes(link.nodeB)) {
+						selectedLinks.push(link);
+					}
 				}
 			}
 	
