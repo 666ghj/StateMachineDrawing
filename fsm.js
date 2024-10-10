@@ -32,6 +32,8 @@ var selectionStart = null;
 var selectionEnd = null;
 var selectedNodes = [];
 var movingMultipleNodes = false;  // 追踪是否正在移动多个节点
+var selectedNodes = [];
+var selectedLinks = [];  // 记录被选中的连接线
 
 
 function ExportAsLaTeX() {
@@ -807,26 +809,34 @@ function drawUsing(c) {
     c.save();
     c.translate(0.5, 0.5);
 
+    // 绘制节点
     for (var i = 0; i < nodes.length; i++) {
         c.lineWidth = 1;
+        // 如果节点被框选或被单点选中，改变其边框和填充颜色为蓝色
         c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject || selectedNodes.includes(nodes[i])) ? 'blue' : 'black';
         nodes[i].draw(c);
     }
+
+    // 绘制连接线
     for (var i = 0; i < links.length; i++) {
         c.lineWidth = 1;
-        c.fillStyle = c.strokeStyle = (links[i] == selectedObject) ? 'blue' : 'black';
+        // 如果连接线被选中，将其颜色和文字颜色改为蓝色
+        var isSelectedLink = selectedLinks.includes(links[i]);
+        c.strokeStyle = isSelectedLink ? 'blue' : 'black';
+        c.fillStyle = isSelectedLink ? 'blue' : 'black';  // 使边上的文字颜色也变色
         links[i].draw(c);
     }
+
     if (currentLink != null) {
         c.lineWidth = 1;
         c.fillStyle = c.strokeStyle = 'black';
         currentLink.draw(c);
     }
 
-    // 绘制选择框
+    // 绘制框选矩形，框的边颜色为蓝色
     if (selectionStart && selectionEnd) {
-        c.strokeStyle = 'rgba(0, 0, 255, 0.5)';
-        c.lineWidth = 1;
+        c.strokeStyle = 'rgba(0, 0, 255, 0.5)'; // 使选择框变为半透明蓝色
+        c.lineWidth = 2; // 加粗选择框的边
         c.strokeRect(selectionStart.x, selectionStart.y, selectionEnd.x - selectionStart.x, selectionEnd.y - selectionStart.y);
     }
 
@@ -879,10 +889,15 @@ window.onload = function() {
 		originalClick = mouse;
 	
 		if (selectedObject != null) {
+			// 点击到一个元素时，如果它不在框选列表中，清空框选的节点并只选中当前元素
+			if (!selectedNodes.includes(selectedObject)) {
+				selectedNodes = [];
+			}
+	
 			if (shift && selectedObject instanceof Node) {
 				currentLink = new SelfLink(selectedObject, mouse);
 			} else if (selectedNodes.includes(selectedObject)) {
-				// 点击的是已选中的多个节点之一，准备移动多个节点
+				// 如果点击的是已框选的节点之一，允许拖动多个节点
 				movingMultipleNodes = true;
 				originalClick = mouse;
 			} else {
@@ -910,6 +925,8 @@ window.onload = function() {
 			return true;
 		}
 	};
+	
+	
 	
 
 	canvas.ondblclick = function(e) {
@@ -941,6 +958,17 @@ window.onload = function() {
 			for (var i = 0; i < selectedNodes.length; i++) {
 				selectedNodes[i].x += dx;
 				selectedNodes[i].y += dy;
+			}
+			// 更新这些节点的连接线
+			for (var i = 0; i < selectedLinks.length; i++) {
+				var link = selectedLinks[i];
+				if (link instanceof SelfLink) {
+					// 自环边不需要特殊处理
+					link.setAnchorPoint(link.node.x, link.node.y);
+				} else {
+					// 普通边要重新设置锚点
+					link.setAnchorPoint((link.nodeA.x + link.nodeB.x) / 2, (link.nodeA.y + link.nodeB.y) / 2);
+				}
 			}
 			originalClick = mouse;  // 更新点击位置
 			draw();
@@ -977,6 +1005,7 @@ window.onload = function() {
 		}
 	};
 	
+	
 
 	canvas.onmouseup = function(e) {
 		movingObject = false;
@@ -992,11 +1021,27 @@ window.onload = function() {
 			// 判断哪些节点在框选区域内
 			for (var i = 0; i < nodes.length; i++) {
 				if (nodes[i].x >= x1 && nodes[i].x <= x2 && nodes[i].y >= y1 && nodes[i].y <= y2) {
-					selectedNodes.push(nodes[i]);
+					selectedNodes.push(nodes[i]);  // 将节点加入选中列表
 				}
 			}
 	
-			// 重置框选区域
+			// 检查节点之间的连接线和自环边
+			selectedLinks = [];
+			for (var i = 0; i < links.length; i++) {
+				var link = links[i];
+				// 如果是自环边，检查其节点是否被选中
+				if (link instanceof SelfLink) {
+					if (selectedNodes.includes(link.node)) {
+						selectedLinks.push(link);  // 高亮自环边
+					}
+				}
+				// 如果是普通连接线，检查其两个节点是否都被选中
+				else if (selectedNodes.includes(link.nodeA) && selectedNodes.includes(link.nodeB)) {
+					selectedLinks.push(link);  // 高亮连接线
+				}
+			}
+	
+			// 清除框选的状态
 			selectionStart = null;
 			selectionEnd = null;
 			draw();  // 重新绘制
@@ -1012,6 +1057,9 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
+	
+	
 	
 }
 
