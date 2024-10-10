@@ -817,7 +817,7 @@ function drawUsing(c) {
         nodes[i].draw(c);
     }
 
-    // 绘制连接线
+    // 绘制连接线，保持连接线形状不变
     for (var i = 0; i < links.length; i++) {
         c.lineWidth = 1;
         // 如果连接线被选中，将其颜色和文字颜色改为蓝色
@@ -842,6 +842,8 @@ function drawUsing(c) {
 
     c.restore();
 }
+
+
 
 
 
@@ -959,27 +961,17 @@ window.onload = function() {
 			selectionEnd = mouse;
 			draw(); // 实时绘制选择框
 		} else if (movingMultipleNodes) {
-			// 移动多个选中的节点和连接线
+			// 移动多个选中的节点
 			var dx = mouse.x - originalClick.x;
 			var dy = mouse.y - originalClick.y;
-			
+	
 			// 移动框选的所有节点
 			for (var i = 0; i < selectedNodes.length; i++) {
 				selectedNodes[i].x += dx;
 				selectedNodes[i].y += dy;
 			}
 	
-			// 更新这些节点的连接线
-			for (var i = 0; i < selectedLinks.length; i++) {
-				var link = selectedLinks[i];
-				if (link instanceof SelfLink) {
-					// 自环边的锚点只需要与节点位置保持同步
-					link.setAnchorPoint(link.node.x, link.node.y);
-				} else {
-					// 普通连接边要重新设置其两个节点的位置
-					link.setAnchorPoint((link.nodeA.x + link.nodeB.x) / 2, (link.nodeA.y + link.nodeB.y) / 2);
-				}
-			}
+			// 注意：不更新连接线的形状，只移动节点
 			originalClick = mouse;  // 更新点击位置
 			draw();
 		} else if (movingObject) {
@@ -1014,6 +1006,9 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
+	
+	
 	
 	
 	
