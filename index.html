@@ -1,6 +1,6 @@
 <!doctype html>
 <html><head>
-	<title>有限状态机设计器 - 由Evan Wallace制作</title>
+	<title>有限自动机快速绘制</title>
   <meta charset="utf-8">
 	<style>
 
@@ -97,7 +97,7 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
-	<h1>有限状态机设计器</h1>
+	<h1>有限自动机快速绘制</h1>
 	<canvas id="canvas" width="800" height="600">
 		<span class="error">您的浏览器不支持<br>HTML5的 &lt;canvas&gt; 元素</span>
 	</canvas>
@@ -106,7 +106,7 @@ if (typeof btoa == 'undefined') {
 			<a href="javascript:saveAsPNG()">PNG</a> | 
 			<a href="javascript:saveAsSVG()">SVG</a> | 
 			<a href="javascript:saveAsLaTeX()">LaTeX</a> | 
-			<a href="javascript:clearCanvas()">清空画布</a> <!-- 新增的清空按钮 -->
+			<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a> <!-- 新增的清空按钮 -->
 		</p>
 		
 		<textarea id="output"></textarea>
