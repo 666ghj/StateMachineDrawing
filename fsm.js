@@ -843,11 +843,6 @@ function drawUsing(c) {
     c.restore();
 }
 
-
-
-
-
-
 function draw() {
 	drawUsing(canvas.getContext('2d'));
 	saveBackup();
@@ -905,6 +900,7 @@ window.onload = function() {
 			} else if (selectedNodes.includes(selectedObject) || selectedLinks.includes(selectedObject)) {
 				// 点击的是框选区域中的节点或边，开始整体移动
 				movingMultipleNodes = true;
+				canvas.style.cursor = 'grab';  // 更改鼠标指针为手型
 				originalClick = mouse;
 			} else {
 				movingObject = true;
@@ -932,11 +928,6 @@ window.onload = function() {
 			return true;
 		}
 	};
-	
-	
-	
-	
-	
 
 	canvas.ondblclick = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -973,6 +964,7 @@ window.onload = function() {
 	
 			// 注意：不更新连接线的形状，只移动节点
 			originalClick = mouse;  // 更新点击位置
+			canvas.style.cursor = 'grabbing';  // 拖动时的手型
 			draw();
 		} else if (movingObject) {
 			// 移动单个对象
@@ -1006,17 +998,13 @@ window.onload = function() {
 			draw();
 		}
 	};
-	
-	
-	
-	
-	
-	
-	
 
 	canvas.onmouseup = function(e) {
 		movingObject = false;
 		movingMultipleNodes = false;
+	
+		// 恢复鼠标指针为默认样式
+		canvas.style.cursor = 'default';
 	
 		if (selectionStart) {
 			// 计算矩形框的范围
@@ -1032,18 +1020,15 @@ window.onload = function() {
 				}
 			}
 	
-			// 检查节点之间的连接线和自环边
+			// 检查节点之间的连接线
 			selectedLinks = [];
 			for (var i = 0; i < links.length; i++) {
 				var link = links[i];
-				// 如果是自环边，检查其节点是否被选中
 				if (link instanceof SelfLink) {
 					if (selectedNodes.includes(link.node)) {
 						selectedLinks.push(link);  // 高亮自环边
 					}
-				}
-				// 如果是普通连接线，检查其两个节点是否都被选中
-				else if (selectedNodes.includes(link.nodeA) && selectedNodes.includes(link.nodeB)) {
+				} else if (selectedNodes.includes(link.nodeA) && selectedNodes.includes(link.nodeB)) {
 					selectedLinks.push(link);  // 高亮连接线
 				}
 			}
@@ -1064,9 +1049,6 @@ window.onload = function() {
 			draw();
 		}
 	};
-	
-	
-	
 	
 }
 
