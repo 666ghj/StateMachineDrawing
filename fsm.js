@@ -844,6 +844,8 @@ function drawUsing(c) {
 }
 
 
+
+
 function draw() {
 	drawUsing(canvas.getContext('2d'));
 	saveBackup();
@@ -889,15 +891,17 @@ window.onload = function() {
 		originalClick = mouse;
 	
 		if (selectedObject != null) {
-			// 点击到一个元素时，如果它不在框选列表中，清空框选的节点并只选中当前元素
-			if (!selectedNodes.includes(selectedObject)) {
+			// 如果点击到的是边或者节点的一部分且该元素被框选，则准备整体移动
+			if (!selectedNodes.includes(selectedObject) && !selectedLinks.includes(selectedObject)) {
+				// 点击的是未选中区域的元素，清空选中状态
 				selectedNodes = [];
+				selectedLinks = [];
 			}
 	
 			if (shift && selectedObject instanceof Node) {
 				currentLink = new SelfLink(selectedObject, mouse);
-			} else if (selectedNodes.includes(selectedObject)) {
-				// 如果点击的是已框选的节点之一，允许拖动多个节点
+			} else if (selectedNodes.includes(selectedObject) || selectedLinks.includes(selectedObject)) {
+				// 点击的是框选区域中的节点或边，开始整体移动
 				movingMultipleNodes = true;
 				originalClick = mouse;
 			} else {
@@ -910,10 +914,11 @@ window.onload = function() {
 		} else if (shift) {
 			currentLink = new TemporaryLink(mouse, mouse);
 		} else {
-			// 如果没有选中任何对象，启动框选模式
+			// 没有点击任何选中对象，开始框选操作
 			selectionStart = mouse;
 			selectionEnd = mouse;
 			selectedNodes = [];
+			selectedLinks = [];
 		}
 	
 		draw();
@@ -925,6 +930,8 @@ window.onload = function() {
 			return true;
 		}
 	};
+	
+	
 	
 	
 	
@@ -952,21 +959,24 @@ window.onload = function() {
 			selectionEnd = mouse;
 			draw(); // 实时绘制选择框
 		} else if (movingMultipleNodes) {
-			// 移动多个选中的节点
+			// 移动多个选中的节点和连接线
 			var dx = mouse.x - originalClick.x;
 			var dy = mouse.y - originalClick.y;
+			
+			// 移动框选的所有节点
 			for (var i = 0; i < selectedNodes.length; i++) {
 				selectedNodes[i].x += dx;
 				selectedNodes[i].y += dy;
 			}
+	
 			// 更新这些节点的连接线
 			for (var i = 0; i < selectedLinks.length; i++) {
 				var link = selectedLinks[i];
 				if (link instanceof SelfLink) {
-					// 自环边不需要特殊处理
+					// 自环边的锚点只需要与节点位置保持同步
 					link.setAnchorPoint(link.node.x, link.node.y);
 				} else {
-					// 普通边要重新设置锚点
+					// 普通连接边要重新设置其两个节点的位置
 					link.setAnchorPoint((link.nodeA.x + link.nodeB.x) / 2, (link.nodeA.y + link.nodeB.y) / 2);
 				}
 			}
@@ -1004,6 +1014,8 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
+	
 	
 	
 
