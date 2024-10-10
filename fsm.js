@@ -325,7 +325,7 @@ Link.prototype.setAnchorPoint = function(x, y) {
 	var scale = Math.sqrt(dx * dx + dy * dy);
 	this.parallelPart = (dx * (x - this.nodeA.x) + dy * (y - this.nodeA.y)) / (scale * scale);
 	this.perpendicularPart = (dx * (y - this.nodeA.y) - dy * (x - this.nodeA.x)) / scale;
-	// snap to a straight line
+	// snap to a straight lineF
 	if(this.parallelPart > 0 && this.parallelPart < 1 && Math.abs(this.perpendicularPart) < snapToPadding) {
 		this.lineAngleAdjust = (this.perpendicularPart < 0) * Math.PI;
 		this.perpendicularPart = 0;
@@ -1157,12 +1157,34 @@ function output(text) {
 }
 
 function saveAsPNG() {
-	var oldSelectedObject = selectedObject;
-	selectedObject = null;
-	drawUsing(canvas.getContext('2d'));
-	selectedObject = oldSelectedObject;
-	var pngData = canvas.toDataURL('image/png');
-	document.location.href = pngData;
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+
+    // 暂时取消选中对象的绘制
+    var oldSelectedObject = selectedObject;
+    selectedObject = null;
+
+    // 重新绘制画布内容
+    drawUsing(context);
+
+    // 将当前画布转换为 PNG 数据
+    var pngData = canvas.toDataURL('image/png');
+
+    // 恢复选中对象
+    selectedObject = oldSelectedObject;
+    draw();  // 恢复选中对象后的画布绘制
+
+    // 创建一个临时的 <a> 元素
+    var link = document.createElement('a');
+    link.href = pngData;
+    link.download = 'canvas.png';  // 设置下载文件名
+
+    // 将这个链接插入到 DOM 中，并模拟点击以触发下载
+    document.body.appendChild(link);
+    link.click();
+
+    // 移除临时的 <a> 元素
+    document.body.removeChild(link);
 }
 
 function saveAsSVG() {
