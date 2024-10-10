@@ -797,7 +797,7 @@ var nodes = [];
 var links = [];
 
 var cursorVisible = true;
-var snapToPadding = 3; // 自动对齐吸里大小
+var snapToPadding = 3; // 自动对齐吸力大小
 var hitTargetPadding = 6; // pixels
 var selectedObject = null; // either a Link or a Node
 var currentLink = null; // a Link
@@ -960,28 +960,38 @@ window.onload = function() {
 			selectionEnd = mouse;
 			draw(); // 实时绘制选择框
 		} else if (movingMultipleNodes) {
-			// 移动多个选中的节点
-			var dx = mouse.x - originalClick.x;
-			var dy = mouse.y - originalClick.y;
+			if (selectedNodes.length === 1) {
+				// 只有一个节点被选中，按照单个节点移动处理
+				var node = selectedNodes[0];
+				node.x += mouse.x - originalClick.x;
+				node.y += mouse.y - originalClick.y;
 	
-			// 移动框选的所有节点
-			for (var i = 0; i < selectedNodes.length; i++) {
-				selectedNodes[i].x += dx;
-				selectedNodes[i].y += dy;
+				// 启用吸附对齐功能
+				snapNode(node);
 	
-				// 对每个节点调用 snapNode 函数，实现自动对齐
-				snapNode(selectedNodes[i]);
+				originalClick = mouse;  // 更新点击位置
+				canvas.style.cursor = 'grabbing';  // 拖动时的手型
+				draw();
+			} else if (selectedNodes.length > 1) {
+				// 移动多个选中的节点，关闭吸附对齐
+				var dx = mouse.x - originalClick.x;
+				var dy = mouse.y - originalClick.y;
+	
+				// 移动框选的所有节点
+				for (var i = 0; i < selectedNodes.length; i++) {
+					selectedNodes[i].x += dx;
+					selectedNodes[i].y += dy;
+				}
+	
+				originalClick = mouse;  // 更新点击位置
+				canvas.style.cursor = 'grabbing';  // 拖动时的手型
+				draw();
 			}
-	
-			// 注意：不更新连接线的形状，只移动节点
-			originalClick = mouse;  // 更新点击位置
-			canvas.style.cursor = 'grabbing';  // 拖动时的手型
-			draw();
 		} else if (movingObject) {
 			// 移动单个对象
 			selectedObject.setAnchorPoint(mouse.x, mouse.y);
 			if (selectedObject instanceof Node) {
-				snapNode(selectedObject);
+				snapNode(selectedObject); // 保持单个节点移动时的吸附功能
 			}
 			canvas.style.cursor = 'grabbing';  // 拖动边时的手型
 			draw();
@@ -1010,6 +1020,7 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
 	
 
 	canvas.onmouseup = function(e) {
