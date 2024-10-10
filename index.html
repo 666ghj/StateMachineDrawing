@@ -102,12 +102,21 @@ if (typeof btoa == 'undefined') {
 		<span class="error">您的浏览器不支持<br>HTML5的 &lt;canvas&gt; 元素</span>
 	</canvas>
 	<div>
-		<p class="center">导出为: 
+		<p class="center">
+			导出为: 
 			<a href="javascript:saveAsPNG()">PNG</a> | 
 			<a href="javascript:saveAsSVG()">SVG</a> | 
 			<a href="javascript:saveAsLaTeX()">LaTeX</a> | 
-			<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a> <!-- 新增的清空按钮 -->
+			<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a>
 		</p>
+		<p class="center">
+			画布增大: 
+			<a href="javascript:enlargeCanvasHeight()" style="font-weight: bolder;">高度增加 50%</a> | 
+			<a href="javascript:enlargeCanvasWidth()" style="font-weight: bolder;">宽度增加 50%</a> | 
+			<a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a> <!-- 新增的重置尺寸按钮 -->
+		</p>
+		
+		
 		
 		<textarea id="output"></textarea>
 		<p>上面的白色大框是有限状态机设计器。以下是使用方法：</p>
