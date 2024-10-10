@@ -1,19 +1,25 @@
 <!doctype html>
 <html><head>
-	<title>有限自动机快速在线绘制</title>
+	<title>有限自动机快速在线绘制 | 郭同学的笔记本</title>
   <meta charset="utf-8">
 	<style>
 
 body {
 	text-align: center;
 	background: #DFDFDF;
-	margin: 0 30px 100px 30px;
+	margin: 0 30px 10px 30px;
 	font: 14px/18px 'Lucida Grande', 'Segoe UI', sans-serif;
-	width: 100%;
 }
 
 h1 {
-	font: bold italic 50px Georgia, serif;
+	margin-top: 50px;
+	font-size: 50px;
+}
+
+.zuozhe{
+	text-align: center;
+	font-size: larger;
+	font-weight: 500;
 }
 
 canvas {
@@ -22,6 +28,7 @@ canvas {
 	border-radius: 20px;
 	-moz-border-radius: 20px;
 	margin: 10px auto;
+	box-shadow: 0px 2px 7px rgba(0, 0, 0, 0.3); /* 添加阴影效果 */
 }
 
 a {
@@ -97,39 +104,62 @@ if (typeof btoa == 'undefined') {
 	</script>
 </head><body>
 	<h1>有限自动机快速在线绘制</h1>
+	<div class="zuozhe">Made By 小郭</div>
 	<canvas id="canvas" width="800" height="600">
 		<span class="error">您的浏览器不支持<br>HTML5的 &lt;canvas&gt; 元素</span>
 	</canvas>
-	<div>
-		<p class="center">
-			导出为: 
+	<p class="center" style="margin-bottom: 0;">
+		画布调节: &nbsp;
+		<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a> |
+		<a href="javascript:enlargeCanvasHeight()">高度增加 50%</a> | 
+		<a href="javascript:enlargeCanvasWidth()" >宽度增加 50%</a> | 
+		<a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a>
+	</p>
+	<div style="margin-top: 10px;">
+		<p class="center" style="margin: 0;">
+			导出为:&nbsp;
 			<a href="javascript:saveAsPNG()">PNG</a> | 
 			<a href="javascript:saveAsSVG()">SVG</a> | 
-			<a href="javascript:saveAsLaTeX()">LaTeX</a> | 
-			<a href="javascript:clearCanvas()" style="font-weight: bolder;">清空画布</a>
-		</p>
-		<p class="center">
-			画布增大: 
-			<a href="javascript:enlargeCanvasHeight()" style="font-weight: bolder;">高度增加 50%</a> | 
-			<a href="javascript:enlargeCanvasWidth()" style="font-weight: bolder;">宽度增加 50%</a> | 
-			<a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a> <!-- 新增的重置尺寸按钮 -->
+			<a href="javascript:saveAsLaTeX()">LaTeX</a> 
 		</p>
 		
+		<div class="center" style="text-align: center; padding: 20px;margin: 0;">
+			<p style="margin: 0; font-size: larger; font-weight: bolder;margin-top: 5px;">使用说明</p>
+			<div style="display: inline-block; text-align: left; margin-top: 0;">
+				<ul style="list-style-type: disc; padding-left: 20px;">
+					<li><b>添加状态：</b>双击画布</li>
+					<li><b>接受/正常状态转换：</b>再次双击已有状态</li>
+					<li><b>添加箭头：</b>按住Shift拖动画布（注意箭头必须指向一个状态才能存在）</li>
+					<li><b>移动对象：</b>单击或框选对象后拖动</li>
+					<li><b>删除对象：</b>点击它然后按下Delete键（而不是Backspace键）</li>
+					<li><b>输入数字下标：</b>在数字前输入下划线（如 "S_0"）</li>
+					<li><b>输入希腊字母：</b>在字母前输入反斜杠（如 空串对应"\epsilon"）</li>
+				</ul>
+			</div>
+			<p style="margin: 0;">这是使用HTML5和JavaScript以及canvas元素制作的，所有内容均在你本地运行</p>
+			<p style="margin: 0;margin-top: 5px;">项目基于<a href="https://madebyevan.com/"> Evan Wallace </a>的作品改进，开源地址：<a href="https://github.com/666ghj/StateMachineDrawing">https://github.com/666ghj/StateMachineDrawing</a>，欢迎支持！</p>
+		</div>
 		
 		
-		<textarea id="output"></textarea>
-		<p>上面的白色大框是有限状态机设计器。以下是使用方法：</p>
-		<ul>
-			<li><b>添加状态：</b>双击画布</li>
-			<li><b>添加箭头：</b>按住Shift拖动画布</li>
-			<li><b>移动对象：</b>拖动它</li>
-			<li><b>删除对象：</b>点击它然后按下Delete键（而不是Backspace键）</li>
-		</ul><ul>
-			<li><b>设置接受状态：</b>双击已有状态</li>
-			<li><b>输入数字下标：</b>在数字前输入下划线（如 "S_0"）</li>
-			<li><b>输入希腊字母：</b>在字母前输入反斜杠（如 "\beta"）</li>
-		</ul>
-		<p>这是使用HTML5和JavaScript以及canvas元素制作的。</p>
+
 	</div>
-	<p>由 <a href="https://madebyevan.com/">Evan Wallace</a> 于2010年制作</p>
+	<div>
+		<p style="font-size: larger;font-weight: bolder;text-align: center;margin-bottom: -20px;">© 2024 郭同学的笔记本</p>
+		<div class="bottom">
+			<span><a href="https://beian.miit.gov.cn/" target="_blank">晋ICP备2024031692号</a></span>
+			<img src="https://lovexl-oss.oss-cn-beijing.aliyuncs.com/bed/202410101323993.png" alt="公安徽标" style="width: 25px; height: 25px; margin: 0 5px;" />
+			<span><a href="https://beian.gov.cn/portal/registerSystemInfo?recordcode=11010802000001" target="_blank">晋公网安备4090202000509号</a></span>
+		</div>
+	</div>
 </body></html>
+
+<style>
+	.bottom{
+		text-align: center;
+		padding-left: 40px;
+	}
+
+	li{
+		margin: 5px;
+	}
+</style>
