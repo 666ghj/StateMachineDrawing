@@ -1197,20 +1197,60 @@ function clearCanvas() {
 const initialWidth = 800;
 const initialHeight = 600;
 
+// 重置画布的尺寸为初始值
+function resetCanvasSize() {
+    var canvas = document.getElementById('canvas');
+    var context = canvas.getContext('2d');
+
+    // 保存当前图像
+    var oldWidth = canvas.width;
+    var oldHeight = canvas.height;
+    var imageData = context.getImageData(0, 0, oldWidth, oldHeight);
+
+    // 重置宽度和高度为初始值
+    canvas.width = initialWidth;
+    canvas.height = initialHeight;
+
+    // 重新设置画布样式
+    canvas.style.width = initialWidth + "px";
+    canvas.style.height = initialHeight + "px";
+
+    // 计算宽度和高度缩放比例
+    var scaleX = initialWidth / oldWidth;
+    var scaleY = initialHeight / oldHeight;
+
+    // 使用缩放因子，计算原内容的居中偏移量
+    var offsetX = (initialWidth - oldWidth) / 2;
+    var offsetY = (initialHeight - oldHeight) / 2;
+
+    // 清空画布
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 使用缩放后的偏移量重新绘制原有内容，使其居中
+    context.putImageData(imageData, offsetX, offsetY);
+
+    // 重新绘制
+    draw();
+}
+
 // 只增加画布的高度50%
 function enlargeCanvasHeight() {
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
-    
+
     // 保存当前图像
     var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    
+
     // 增加50%的高度
     var oldHeight = canvas.height;
     canvas.height = oldHeight * 1.5;
 
+    // 重新设置画布样式
+    canvas.style.height = canvas.height + "px";
+
     // 重新绘制之前的图像，不改变图像的大小和位置
     context.putImageData(imageData, 0, 0);
+
     draw();  // 如果有额外的绘制操作需要执行
 }
 
@@ -1218,34 +1258,19 @@ function enlargeCanvasHeight() {
 function enlargeCanvasWidth() {
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
-    
+
     // 保存当前图像
     var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    
+
     // 增加50%的宽度
     var oldWidth = canvas.width;
     canvas.width = oldWidth * 1.5;
 
+    // 重新设置画布样式
+    canvas.style.width = canvas.width + "px";
+
     // 重新绘制之前的图像，并保持左右两边扩展
     context.putImageData(imageData, (canvas.width - oldWidth) / 2, 0);
+
     draw();  // 如果有额外的绘制操作需要执行
 }
-
-// 重置画布的尺寸为初始值
-function resetCanvasSize() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
-
-    // 保存当前图像
-    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-    // 重置宽度和高度为初始值
-    canvas.width = initialWidth;
-    canvas.height = initialHeight;
-
-    // 重新绘制之前的图像，不改变图像的大小和位置
-    context.putImageData(imageData, 0, 0);
-    draw();  // 如果有额外的绘制操作需要执行
-}
-
-
