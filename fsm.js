@@ -1197,41 +1197,34 @@ function clearCanvas() {
 const initialWidth = 800;
 const initialHeight = 600;
 
-// 重置画布的尺寸为初始值
+// 重置画布的尺寸为初始值，并提示用户确认
 function resetCanvasSize() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
+    var userConfirmed = confirm("重置画布尺寸将清空内容，该操作无法撤销！");
+    if (userConfirmed) {
+        var canvas = document.getElementById('canvas');
+        var context = canvas.getContext('2d');
 
-    // 保存当前图像
-    var oldWidth = canvas.width;
-    var oldHeight = canvas.height;
-    var imageData = context.getImageData(0, 0, oldWidth, oldHeight);
+        // 重置宽度和高度为初始值
+        canvas.width = initialWidth;
+        canvas.height = initialHeight;
 
-    // 重置宽度和高度为初始值
-    canvas.width = initialWidth;
-    canvas.height = initialHeight;
+        // 重新设置画布样式
+        canvas.style.width = initialWidth + "px";
+        canvas.style.height = initialHeight + "px";
 
-    // 重新设置画布样式
-    canvas.style.width = initialWidth + "px";
-    canvas.style.height = initialHeight + "px";
+        // 清空画布内容
+        context.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 计算宽度和高度缩放比例
-    var scaleX = initialWidth / oldWidth;
-    var scaleY = initialHeight / oldHeight;
+        // 清空节点和链接数组
+        nodes = [];
+        links = [];
+        selectedObject = null;
 
-    // 使用缩放因子，计算原内容的居中偏移量
-    var offsetX = (initialWidth - oldWidth) / 2;
-    var offsetY = (initialHeight - oldHeight) / 2;
-
-    // 清空画布
-    context.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 使用缩放后的偏移量重新绘制原有内容，使其居中
-    context.putImageData(imageData, offsetX, offsetY);
-
-    // 重新绘制
-    draw();
+        // 重新绘制清空后的画布
+        draw();
+    }
 }
+
 
 // 只增加画布的高度50%
 function enlargeCanvasHeight() {
