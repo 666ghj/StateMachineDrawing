@@ -1,6 +1,6 @@
 <!doctype html>
 <html><head>
-	<title>Finite State Machine Designer - by Evan Wallace</title>
+	<title>有限状态机设计器 - 由Evan Wallace制作</title>
   <meta charset="utf-8">
 	<style>
 
@@ -63,13 +63,13 @@ textarea {
 	<script>
 
 /*
- * base64.js - Base64 encoding and decoding functions
+ * base64.js - Base64 编码和解码函数
  *
- * See: https://developer.mozilla.org/en-US/docs/Web/API/btoa
+ * 参考: https://developer.mozilla.org/en-US/docs/Web/API/btoa
  *      https://developer.mozilla.org/en-US/docs/Web/API/atob
  *
  * Copyright (c) 2007, David Lindquist <david.lindquist@gmail.com>
- * Released under the MIT license
+ * 根据 MIT 许可证发布
  */
 
 if (typeof btoa == 'undefined') {
@@ -97,25 +97,31 @@ if (typeof btoa == 'undefined') {
 
 	</script>
 </head><body>
-	<h1>Finite State Machine Designer</h1>
+	<h1>有限状态机设计器</h1>
 	<canvas id="canvas" width="800" height="600">
-		<span class="error">Your browser does not support<br>the HTML5 &lt;canvas&gt; element</span>
+		<span class="error">您的浏览器不支持<br>HTML5的 &lt;canvas&gt; 元素</span>
 	</canvas>
 	<div>
-		<p class="center">Export as: <a href="javascript:saveAsPNG()">PNG</a> | <a href="javascript:saveAsSVG()">SVG</a> | <a href="javascript:saveAsLaTeX()">LaTeX</a></p>
+		<p class="center">导出为: 
+			<a href="javascript:saveAsPNG()">PNG</a> | 
+			<a href="javascript:saveAsSVG()">SVG</a> | 
+			<a href="javascript:saveAsLaTeX()">LaTeX</a> | 
+			<a href="javascript:clearCanvas()">清空画布</a> <!-- 新增的清空按钮 -->
+		</p>
+		
 		<textarea id="output"></textarea>
-		<p>The big white box above is the FSM designer.&nbsp; Here's how to use it:</p>
+		<p>上面的白色大框是有限状态机设计器。以下是使用方法：</p>
 		<ul>
-			<li><b>Add a state:</b> double-click on the canvas</li>
-			<li><b>Add an arrow:</b> shift-drag on the canvas</li>
-			<li><b>Move something:</b> drag it around</li>
-			<li><b>Delete something:</b> click it and press the delete key (not the backspace key)</li>
+			<li><b>添加状态：</b>双击画布</li>
+			<li><b>添加箭头：</b>按住Shift拖动画布</li>
+			<li><b>移动对象：</b>拖动它</li>
+			<li><b>删除对象：</b>点击它然后按下Delete键（而不是Backspace键）</li>
 		</ul><ul>
-			<li><b>Make accept state:</b> double-click on an existing state</li>
-			<li><b>Type numeric subscript:</b> put an underscore before the number (like "S_0")</li>
-			<li><b>Type greek letter:</b> put a backslash before it (like "\beta")</li>
+			<li><b>设置接受状态：</b>双击已有状态</li>
+			<li><b>输入数字下标：</b>在数字前输入下划线（如 "S_0"）</li>
+			<li><b>输入希腊字母：</b>在字母前输入反斜杠（如 "\beta"）</li>
 		</ul>
-		<p>This was made in HTML5 and JavaScript using the canvas element.</p>
+		<p>这是使用HTML5和JavaScript以及canvas元素制作的。</p>
 	</div>
-	<p>Created by <a href="https://madebyevan.com/">Evan Wallace</a> in 2010</p>
+	<p>由 <a href="https://madebyevan.com/">Evan Wallace</a> 于2010年制作</p>
 </body></html>

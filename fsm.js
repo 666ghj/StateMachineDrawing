@@ -1186,3 +1186,10 @@ function saveAsLaTeX() {
 	var texData = exporter.toLaTeX();
 	output(texData);
 }
+function clearCanvas() {
+    nodes = [];
+    links = [];
+    selectedObject = null;
+    draw();  // 重新绘制清空后的画布
+}
+
