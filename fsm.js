@@ -464,21 +464,31 @@ Node.prototype.setAnchorPoint = function(x, y) {
 };
 
 Node.prototype.draw = function(c) {
-	// draw the circle
-	c.beginPath();
-	c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
-	c.stroke();
+    // 绘制节点圆圈
+    c.beginPath();
+    c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
+    c.fillStyle = 'white'; // 节点填充颜色
+    c.fill();
+    c.stroke();
 
-	// draw the text
-	drawText(c, this.text, this.x, this.y, null, selectedObject == this);
+    // 设置文字颜色
+    if (selectedNodes.includes(this) || selectedObject == this) {
+        c.fillStyle = 'blue'; // 选中节点的文字颜色
+    } else {
+        c.fillStyle = 'black'; // 默认文字颜色
+    }
 
-	// draw a double circle for an accept state
-	if(this.isAcceptState) {
-		c.beginPath();
-		c.arc(this.x, this.y, nodeRadius - 6, 0, 2 * Math.PI, false);
-		c.stroke();
-	}
+    // 绘制节点文字
+    drawText(c, this.text, this.x, this.y, null, selectedObject == this);
+
+    // 如果是接受状态，绘制双圈
+    if (this.isAcceptState) {
+        c.beginPath();
+        c.arc(this.x, this.y, nodeRadius - 6, 0, 2 * Math.PI, false);
+        c.stroke();
+    }
 };
+
 
 Node.prototype.closestPointOnCircle = function(x, y) {
 	var dx = x - this.x;
@@ -812,36 +822,38 @@ function drawUsing(c) {
     // 绘制节点
     for (var i = 0; i < nodes.length; i++) {
         c.lineWidth = 1;
-        // 如果节点被框选或被单点选中，改变其边框和填充颜色为蓝色
-        c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject || selectedNodes.includes(nodes[i])) ? 'blue' : 'black';
+        var isSelectedNode = selectedNodes.includes(nodes[i]) || nodes[i] == selectedObject;
+        c.strokeStyle = isSelectedNode ? 'blue' : 'black';
         nodes[i].draw(c);
     }
 
-    // 绘制连接线，保持连接线形状不变
+    // 绘制连接线
     for (var i = 0; i < links.length; i++) {
         c.lineWidth = 1;
-        // 如果连接线被选中，将其颜色和文字颜色改为蓝色
-        var isSelectedLink = selectedLinks.includes(links[i]);
+        var isSelectedLink = selectedLinks.includes(links[i]) || links[i] == selectedObject;
         c.strokeStyle = isSelectedLink ? 'blue' : 'black';
-        c.fillStyle = isSelectedLink ? 'blue' : 'black';  // 使边上的文字颜色也变色
+        c.fillStyle = isSelectedLink ? 'blue' : 'black';
         links[i].draw(c);
     }
 
+    // 绘制当前连接线
     if (currentLink != null) {
         c.lineWidth = 1;
-        c.fillStyle = c.strokeStyle = 'black';
+        c.strokeStyle = 'black';
+        c.fillStyle = 'black';
         currentLink.draw(c);
     }
 
-    // 绘制框选矩形，框的边颜色为蓝色
+    // 绘制选择框
     if (selectionStart && selectionEnd) {
-        c.strokeStyle = 'rgba(0, 0, 255, 0.5)'; // 使选择框变为半透明蓝色
-        c.lineWidth = 2; // 加粗选择框的边
+        c.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+        c.lineWidth = 2;
         c.strokeRect(selectionStart.x, selectionStart.y, selectionEnd.x - selectionStart.x, selectionEnd.y - selectionStart.y);
     }
 
     c.restore();
 }
+
 
 function draw() {
 	drawUsing(canvas.getContext('2d'));
@@ -1206,7 +1218,7 @@ function saveAsPNG() {
     // 创建一个临时的 <a> 元素
     var link = document.createElement('a');
     link.href = pngData;
-    link.download = 'canvas.png';  // 设置下载文件名
+    link.download = '我爱小郭.png';  // 设置下载文件名
 
     // 将这个链接插入到 DOM 中，并模拟点击以触发下载
     document.body.appendChild(link);
@@ -1318,3 +1330,201 @@ function enlargeCanvasWidth() {
 
     draw();  // 如果有额外的绘制操作需要执行
 }
+
+// 框选复制、删除的功能
+var clipboard = {
+    nodes: [],
+    links: []
+};
+
+document.onkeydown = function(e) {
+    var key = crossBrowserKey(e);
+
+    if (key == 16) {
+        shift = true;
+    } else if (!canvasHasFocus()) {
+        return true;
+    } else if (e.ctrlKey && key == 67) { // Ctrl+C
+        handleCopy();
+        return false; // 阻止默认事件
+    } else if (e.ctrlKey && key == 86) { // Ctrl+V
+        handlePaste();
+        return false; // 阻止默认事件
+    } else if (key == 46) { // Delete key
+        handleDelete();
+        return false; // 阻止默认事件
+    } else if (key == 8) { // Backspace key
+        if (selectedObject != null && 'text' in selectedObject) {
+            selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
+            resetCaret();
+            draw();
+        }
+        return false;
+    }
+};
+
+function handleCopy() {
+    if (selectedNodes.length > 0 || selectedLinks.length > 0) {
+        clipboard.nodes = [];
+        clipboard.links = [];
+        var nodeMap = new Map();
+
+        // 复制节点
+        selectedNodes.forEach(function(node) {
+            var copiedNode = new Node(node.x, node.y);
+            copiedNode.text = node.text;
+            copiedNode.isAcceptState = node.isAcceptState;
+            clipboard.nodes.push(copiedNode);
+            nodeMap.set(node, copiedNode);
+        });
+
+        // 复制连接线
+        selectedLinks.forEach(function(link) {
+            var copiedLink = null;
+
+            if (link instanceof SelfLink) {
+                var newNode = nodeMap.get(link.node);
+                if (newNode) {
+                    copiedLink = new SelfLink(newNode);
+                    copiedLink.text = link.text;
+                    copiedLink.anchorAngle = link.anchorAngle;
+                }
+            } else if (link instanceof StartLink) {
+                var newNode = nodeMap.get(link.node);
+                if (newNode) {
+                    copiedLink = new StartLink(newNode);
+                    copiedLink.text = link.text;
+                    copiedLink.deltaX = link.deltaX;
+                    copiedLink.deltaY = link.deltaY;
+                }
+            } else if (link instanceof Link) {
+                var newNodeA = nodeMap.get(link.nodeA);
+                var newNodeB = nodeMap.get(link.nodeB);
+                if (newNodeA && newNodeB) {
+                    copiedLink = new Link(newNodeA, newNodeB);
+                    copiedLink.text = link.text;
+                    copiedLink.lineAngleAdjust = link.lineAngleAdjust;
+                    copiedLink.parallelPart = link.parallelPart;
+                    copiedLink.perpendicularPart = link.perpendicularPart;
+                }
+            }
+
+            if (copiedLink) {
+                clipboard.links.push(copiedLink);
+            }
+        });
+    }
+}
+
+function handlePaste() {
+    if (clipboard.nodes.length > 0) {
+        var nodeMap = new Map();
+        var offsetX = 20;
+        var offsetY = 20;
+
+        selectedNodes = [];
+        selectedLinks = [];
+
+        // 粘贴节点
+        clipboard.nodes.forEach(function(copiedNode) {
+            var newNode = new Node(copiedNode.x + offsetX, copiedNode.y + offsetY);
+            newNode.text = copiedNode.text;
+            newNode.isAcceptState = copiedNode.isAcceptState;
+            nodes.push(newNode);
+            nodeMap.set(copiedNode, newNode);
+            selectedNodes.push(newNode);
+        });
+
+        // 粘贴连接线
+        clipboard.links.forEach(function(copiedLink) {
+            var newLink = null;
+
+            if (copiedLink instanceof SelfLink) {
+                var newNode = nodeMap.get(copiedLink.node);
+                if (newNode) {
+                    newLink = new SelfLink(newNode);
+                    newLink.text = copiedLink.text;
+                    newLink.anchorAngle = copiedLink.anchorAngle;
+                }
+            } else if (copiedLink instanceof StartLink) {
+                var newNode = nodeMap.get(copiedLink.node);
+                if (newNode) {
+                    newLink = new StartLink(newNode);
+                    newLink.text = copiedLink.text;
+                    newLink.deltaX = copiedLink.deltaX;
+                    newLink.deltaY = copiedLink.deltaY;
+                }
+            } else if (copiedLink instanceof Link) {
+                var newNodeA = nodeMap.get(copiedLink.nodeA);
+                var newNodeB = nodeMap.get(copiedLink.nodeB);
+                if (newNodeA && newNodeB) {
+                    newLink = new Link(newNodeA, newNodeB);
+                    newLink.text = copiedLink.text;
+                    newLink.lineAngleAdjust = copiedLink.lineAngleAdjust;
+                    newLink.parallelPart = copiedLink.parallelPart;
+                    newLink.perpendicularPart = copiedLink.perpendicularPart;
+                }
+            }
+
+            if (newLink) {
+                links.push(newLink);
+                selectedLinks.push(newLink);
+            }
+        });
+
+        draw();
+    }
+}
+
+function handleDelete() {
+    if (selectedNodes.length > 0 || selectedLinks.length > 0) {
+        // 删除选中的节点
+        selectedNodes.forEach(function(node) {
+            var index = nodes.indexOf(node);
+            if (index > -1) {
+                nodes.splice(index, 1);
+            }
+            // 删除与该节点相关的连接线
+            links = links.filter(function(link) {
+                return !(link.node === node || link.nodeA === node || link.nodeB === node);
+            });
+        });
+
+        // 删除选中的连接线
+        selectedLinks.forEach(function(link) {
+            var index = links.indexOf(link);
+            if (index > -1) {
+                links.splice(index, 1);
+            }
+        });
+
+        // 清空选中状态
+        selectedNodes = [];
+        selectedLinks = [];
+        selectedObject = null;
+
+        draw();
+    } else if (selectedObject != null) {
+        // 删除单个选中的对象
+        if (selectedObject instanceof Node) {
+            var index = nodes.indexOf(selectedObject);
+            if (index > -1) {
+                nodes.splice(index, 1);
+            }
+            // 删除与该节点相关的连接线
+            links = links.filter(function(link) {
+                return !(link.node === selectedObject || link.nodeA === selectedObject || link.nodeB === selectedObject);
+            });
+        } else if (selectedObject instanceof Link || selectedObject instanceof SelfLink || selectedObject instanceof StartLink) {
+            var index = links.indexOf(selectedObject);
+            if (index > -1) {
+                links.splice(index, 1);
+            }
+        }
+
+        selectedObject = null;
+        draw();
+    }
+}
+
+
