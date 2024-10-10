@@ -893,6 +893,13 @@ window.onload = function() {
 				// 点击的是未选中区域的元素，清空选中状态
 				selectedNodes = [];
 				selectedLinks = [];
+	
+				// 根据选中的对象类型，将其添加到相应的数组中
+				if (selectedObject instanceof Node) {
+					selectedNodes.push(selectedObject);
+				} else if (selectedObject instanceof Link) {
+					selectedLinks.push(selectedObject);
+				}
 			}
 	
 			if (shift && selectedObject instanceof Node) {
@@ -928,6 +935,7 @@ window.onload = function() {
 			return true;
 		}
 	};
+	
 
 	canvas.ondblclick = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
