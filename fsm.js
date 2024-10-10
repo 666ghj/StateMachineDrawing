@@ -904,8 +904,8 @@ window.onload = function() {
 	
 			if (shift && selectedObject instanceof Node) {
 				currentLink = new SelfLink(selectedObject, mouse);
-			} else if (selectedNodes.includes(selectedObject) || selectedLinks.includes(selectedObject)) {
-				// 点击的是框选区域中的节点或边，开始整体移动
+			} else if (selectedObject instanceof Node && selectedNodes.includes(selectedObject)) {
+				// 点击的是框选区域中的节点，开始整体移动
 				movingMultipleNodes = true;
 				canvas.style.cursor = 'grab';  // 更改鼠标指针为手型
 				originalClick = mouse;
@@ -913,6 +913,7 @@ window.onload = function() {
 				movingObject = true;
 				if (selectedObject.setMouseStart) {
 					selectedObject.setMouseStart(mouse.x, mouse.y);
+					canvas.style.cursor = 'grab';  // 更改鼠标指针为手型
 				}
 			}
 			resetCaret();
@@ -935,7 +936,6 @@ window.onload = function() {
 			return true;
 		}
 	};
-	
 
 	canvas.ondblclick = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -980,6 +980,7 @@ window.onload = function() {
 			if (selectedObject instanceof Node) {
 				snapNode(selectedObject);
 			}
+			canvas.style.cursor = 'grabbing';  // 拖动边时的手型
 			draw();
 		} else if (currentLink) {
 			// 如果是链接
