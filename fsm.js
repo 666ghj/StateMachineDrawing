@@ -797,7 +797,7 @@ var nodes = [];
 var links = [];
 
 var cursorVisible = true;
-var snapToPadding = 6; // pixels
+var snapToPadding = 3; // 自动对齐吸里大小
 var hitTargetPadding = 6; // pixels
 var selectedObject = null; // either a Link or a Node
 var currentLink = null; // a Link
@@ -968,6 +968,9 @@ window.onload = function() {
 			for (var i = 0; i < selectedNodes.length; i++) {
 				selectedNodes[i].x += dx;
 				selectedNodes[i].y += dy;
+	
+				// 对每个节点调用 snapNode 函数，实现自动对齐
+				snapNode(selectedNodes[i]);
 			}
 	
 			// 注意：不更新连接线的形状，只移动节点
@@ -1007,6 +1010,7 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
 
 	canvas.onmouseup = function(e) {
 		movingObject = false;
