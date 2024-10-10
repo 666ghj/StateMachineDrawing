@@ -27,6 +27,13 @@
 */
 
 // draw using this instead of a canvas and call toLaTeX() afterward
+
+var selectionStart = null;
+var selectionEnd = null;
+var selectedNodes = [];
+var movingMultipleNodes = false;  // 追踪是否正在移动多个节点
+
+
 function ExportAsLaTeX() {
 	this._points = [];
 	this._texData = '';
@@ -796,28 +803,36 @@ var movingObject = false;
 var originalClick;
 
 function drawUsing(c) {
-	c.clearRect(0, 0, canvas.width, canvas.height);
-	c.save();
-	c.translate(0.5, 0.5);
+    c.clearRect(0, 0, canvas.width, canvas.height);
+    c.save();
+    c.translate(0.5, 0.5);
 
-	for(var i = 0; i < nodes.length; i++) {
-		c.lineWidth = 1;
-		c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject) ? 'blue' : 'black';
-		nodes[i].draw(c);
-	}
-	for(var i = 0; i < links.length; i++) {
-		c.lineWidth = 1;
-		c.fillStyle = c.strokeStyle = (links[i] == selectedObject) ? 'blue' : 'black';
-		links[i].draw(c);
-	}
-	if(currentLink != null) {
-		c.lineWidth = 1;
-		c.fillStyle = c.strokeStyle = 'black';
-		currentLink.draw(c);
-	}
+    for (var i = 0; i < nodes.length; i++) {
+        c.lineWidth = 1;
+        c.fillStyle = c.strokeStyle = (nodes[i] == selectedObject || selectedNodes.includes(nodes[i])) ? 'blue' : 'black';
+        nodes[i].draw(c);
+    }
+    for (var i = 0; i < links.length; i++) {
+        c.lineWidth = 1;
+        c.fillStyle = c.strokeStyle = (links[i] == selectedObject) ? 'blue' : 'black';
+        links[i].draw(c);
+    }
+    if (currentLink != null) {
+        c.lineWidth = 1;
+        c.fillStyle = c.strokeStyle = 'black';
+        currentLink.draw(c);
+    }
 
-	c.restore();
+    // 绘制选择框
+    if (selectionStart && selectionEnd) {
+        c.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+        c.lineWidth = 1;
+        c.strokeRect(selectionStart.x, selectionStart.y, selectionEnd.x - selectionStart.x, selectionEnd.y - selectionStart.y);
+    }
+
+    c.restore();
 }
+
 
 function draw() {
 	drawUsing(canvas.getContext('2d'));
@@ -862,33 +877,40 @@ window.onload = function() {
 		selectedObject = selectObject(mouse.x, mouse.y);
 		movingObject = false;
 		originalClick = mouse;
-
-		if(selectedObject != null) {
-			if(shift && selectedObject instanceof Node) {
+	
+		if (selectedObject != null) {
+			if (shift && selectedObject instanceof Node) {
 				currentLink = new SelfLink(selectedObject, mouse);
+			} else if (selectedNodes.includes(selectedObject)) {
+				// 点击的是已选中的多个节点之一，准备移动多个节点
+				movingMultipleNodes = true;
+				originalClick = mouse;
 			} else {
 				movingObject = true;
-				deltaMouseX = deltaMouseY = 0;
-				if(selectedObject.setMouseStart) {
+				if (selectedObject.setMouseStart) {
 					selectedObject.setMouseStart(mouse.x, mouse.y);
 				}
 			}
 			resetCaret();
-		} else if(shift) {
+		} else if (shift) {
 			currentLink = new TemporaryLink(mouse, mouse);
-		}
-
-		draw();
-
-		if(canvasHasFocus()) {
-			// disable drag-and-drop only if the canvas is already focused
-			return false;
 		} else {
-			// otherwise, let the browser switch the focus away from wherever it was
+			// 如果没有选中任何对象，启动框选模式
+			selectionStart = mouse;
+			selectionEnd = mouse;
+			selectedNodes = [];
+		}
+	
+		draw();
+	
+		if (canvasHasFocus()) {
+			return false; // 禁止拖放行为
+		} else {
 			resetCaret();
 			return true;
 		}
 	};
+	
 
 	canvas.ondblclick = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
@@ -907,23 +929,45 @@ window.onload = function() {
 
 	canvas.onmousemove = function(e) {
 		var mouse = crossBrowserRelativeMousePos(e);
-
-		if(currentLink != null) {
+	
+		if (selectionStart) {
+			// 更新选择框结束点
+			selectionEnd = mouse;
+			draw(); // 实时绘制选择框
+		} else if (movingMultipleNodes) {
+			// 移动多个选中的节点
+			var dx = mouse.x - originalClick.x;
+			var dy = mouse.y - originalClick.y;
+			for (var i = 0; i < selectedNodes.length; i++) {
+				selectedNodes[i].x += dx;
+				selectedNodes[i].y += dy;
+			}
+			originalClick = mouse;  // 更新点击位置
+			draw();
+		} else if (movingObject) {
+			// 移动单个对象
+			selectedObject.setAnchorPoint(mouse.x, mouse.y);
+			if (selectedObject instanceof Node) {
+				snapNode(selectedObject);
+			}
+			draw();
+		} else if (currentLink) {
+			// 如果是链接
 			var targetNode = selectObject(mouse.x, mouse.y);
-			if(!(targetNode instanceof Node)) {
+			if (!(targetNode instanceof Node)) {
 				targetNode = null;
 			}
-
-			if(selectedObject == null) {
-				if(targetNode != null) {
+	
+			if (selectedObject == null) {
+				if (targetNode != null) {
 					currentLink = new StartLink(targetNode, originalClick);
 				} else {
 					currentLink = new TemporaryLink(originalClick, mouse);
 				}
 			} else {
-				if(targetNode == selectedObject) {
+				if (targetNode == selectedObject) {
 					currentLink = new SelfLink(selectedObject, mouse);
-				} else if(targetNode != null) {
+				} else if (targetNode != null) {
 					currentLink = new Link(selectedObject, targetNode);
 				} else {
 					currentLink = new TemporaryLink(selectedObject.closestPointOnCircle(mouse.x, mouse.y), mouse);
@@ -931,21 +975,35 @@ window.onload = function() {
 			}
 			draw();
 		}
-
-		if(movingObject) {
-			selectedObject.setAnchorPoint(mouse.x, mouse.y);
-			if(selectedObject instanceof Node) {
-				snapNode(selectedObject);
-			}
-			draw();
-		}
 	};
+	
 
 	canvas.onmouseup = function(e) {
 		movingObject = false;
-
-		if(currentLink != null) {
-			if(!(currentLink instanceof TemporaryLink)) {
+		movingMultipleNodes = false;
+	
+		if (selectionStart) {
+			// 计算矩形框的范围
+			var x1 = Math.min(selectionStart.x, selectionEnd.x);
+			var y1 = Math.min(selectionStart.y, selectionEnd.y);
+			var x2 = Math.max(selectionStart.x, selectionEnd.x);
+			var y2 = Math.max(selectionStart.y, selectionEnd.y);
+	
+			// 判断哪些节点在框选区域内
+			for (var i = 0; i < nodes.length; i++) {
+				if (nodes[i].x >= x1 && nodes[i].x <= x2 && nodes[i].y >= y1 && nodes[i].y <= y2) {
+					selectedNodes.push(nodes[i]);
+				}
+			}
+	
+			// 重置框选区域
+			selectionStart = null;
+			selectionEnd = null;
+			draw();  // 重新绘制
+		}
+	
+		if (currentLink != null) {
+			if (!(currentLink instanceof TemporaryLink)) {
 				selectedObject = currentLink;
 				links.push(currentLink);
 				resetCaret();
@@ -954,6 +1012,7 @@ window.onload = function() {
 			draw();
 		}
 	};
+	
 }
 
 var shift = false;
