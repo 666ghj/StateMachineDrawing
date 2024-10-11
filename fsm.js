@@ -278,21 +278,21 @@ StartLink.prototype.getEndPoints = function() {
 	};
 };
 
-StartLink.prototype.draw = function(c) {
-	var stuff = this.getEndPoints();
+StartLink.prototype.draw = function(c, canvasData) {
+    var stuff = this.getEndPoints();
 
-	// draw the line
-	c.beginPath();
-	c.moveTo(stuff.startX, stuff.startY);
-	c.lineTo(stuff.endX, stuff.endY);
-	c.stroke();
+    // 绘制线条
+    c.beginPath();
+    c.moveTo(stuff.startX, stuff.startY);
+    c.lineTo(stuff.endX, stuff.endY);
+    c.stroke();
 
-	// draw the text at the end without the arrow
-	var textAngle = Math.atan2(stuff.startY - stuff.endY, stuff.startX - stuff.endX);
-	drawText(c, this.text, stuff.startX, stuff.startY, textAngle, selectedObject == this);
+    // 绘制文字
+    var textAngle = Math.atan2(stuff.startY - stuff.endY, stuff.startX - stuff.endX);
+    drawText(c, this.text, stuff.startX, stuff.startY, textAngle, canvasData.selectedObject === this, canvasData);
 
-	// draw the head of the arrow
-	drawArrow(c, stuff.endX, stuff.endY, Math.atan2(-this.deltaY, -this.deltaX));
+    // 绘制箭头
+    drawArrow(c, stuff.endX, stuff.endY, Math.atan2(-this.deltaY, -this.deltaX));
 };
 
 StartLink.prototype.containsPoint = function(x, y) {
@@ -379,40 +379,40 @@ Link.prototype.getEndPointsAndCircle = function() {
 	};
 };
 
-Link.prototype.draw = function(c) {
-	var stuff = this.getEndPointsAndCircle();
-	// draw arc
-	c.beginPath();
-	if(stuff.hasCircle) {
-		c.arc(stuff.circleX, stuff.circleY, stuff.circleRadius, stuff.startAngle, stuff.endAngle, stuff.isReversed);
-	} else {
-		c.moveTo(stuff.startX, stuff.startY);
-		c.lineTo(stuff.endX, stuff.endY);
-	}
-	c.stroke();
-	// draw the head of the arrow
-	if(stuff.hasCircle) {
-		drawArrow(c, stuff.endX, stuff.endY, stuff.endAngle - stuff.reverseScale * (Math.PI / 2));
-	} else {
-		drawArrow(c, stuff.endX, stuff.endY, Math.atan2(stuff.endY - stuff.startY, stuff.endX - stuff.startX));
-	}
-	// draw the text
-	if(stuff.hasCircle) {
-		var startAngle = stuff.startAngle;
-		var endAngle = stuff.endAngle;
-		if(endAngle < startAngle) {
-			endAngle += Math.PI * 2;
-		}
-		var textAngle = (startAngle + endAngle) / 2 + stuff.isReversed * Math.PI;
-		var textX = stuff.circleX + stuff.circleRadius * Math.cos(textAngle);
-		var textY = stuff.circleY + stuff.circleRadius * Math.sin(textAngle);
-		drawText(c, this.text, textX, textY, textAngle, selectedObject == this);
-	} else {
-		var textX = (stuff.startX + stuff.endX) / 2;
-		var textY = (stuff.startY + stuff.endY) / 2;
-		var textAngle = Math.atan2(stuff.endX - stuff.startX, stuff.startY - stuff.endY);
-		drawText(c, this.text, textX, textY, textAngle + this.lineAngleAdjust, selectedObject == this);
-	}
+Link.prototype.draw = function(c, canvasData) {
+    var stuff = this.getEndPointsAndCircle();
+    // 绘制弧线
+    c.beginPath();
+    if (stuff.hasCircle) {
+        c.arc(stuff.circleX, stuff.circleY, stuff.circleRadius, stuff.startAngle, stuff.endAngle, stuff.isReversed);
+    } else {
+        c.moveTo(stuff.startX, stuff.startY);
+        c.lineTo(stuff.endX, stuff.endY);
+    }
+    c.stroke();
+    // 绘制箭头
+    if (stuff.hasCircle) {
+        drawArrow(c, stuff.endX, stuff.endY, stuff.endAngle - stuff.reverseScale * (Math.PI / 2));
+    } else {
+        drawArrow(c, stuff.endX, stuff.endY, Math.atan2(stuff.endY - stuff.startY, stuff.endX - stuff.startX));
+    }
+    // 绘制文字
+    if (stuff.hasCircle) {
+        var startAngle = stuff.startAngle;
+        var endAngle = stuff.endAngle;
+        if (endAngle < startAngle) {
+            endAngle += Math.PI * 2;
+        }
+        var textAngle = (startAngle + endAngle) / 2 + stuff.isReversed * Math.PI;
+        var textX = stuff.circleX + stuff.circleRadius * Math.cos(textAngle);
+        var textY = stuff.circleY + stuff.circleRadius * Math.sin(textAngle);
+        drawText(c, this.text, textX, textY, textAngle, canvasData.selectedObject === this, canvasData);
+    } else {
+        var textX = (stuff.startX + stuff.endX) / 2;
+        var textY = (stuff.startY + stuff.endY) / 2;
+        var textAngle = Math.atan2(stuff.endX - stuff.startX, stuff.startY - stuff.endY);
+        drawText(c, this.text, textX, textY, textAngle + this.lineAngleAdjust, canvasData.selectedObject === this, canvasData);
+    }
 };
 
 Link.prototype.containsPoint = function(x, y) {
@@ -470,7 +470,7 @@ Node.prototype.setAnchorPoint = function(x, y) {
 	this.y = y + this.mouseOffsetY;
 };
 
-Node.prototype.draw = function(c) {
+Node.prototype.draw = function(c, canvasData) {
     // 绘制节点圆圈
     c.beginPath();
     c.arc(this.x, this.y, nodeRadius, 0, 2 * Math.PI, false);
@@ -479,14 +479,14 @@ Node.prototype.draw = function(c) {
     c.stroke();
 
     // 设置文字颜色
-    if (selectedNodes.includes(this) || selectedObject == this) {
+    if (canvasData.selectedNodes.includes(this) || canvasData.selectedObject === this) {
         c.fillStyle = 'blue'; // 选中节点的文字颜色
     } else {
         c.fillStyle = 'black'; // 默认文字颜色
     }
 
     // 绘制节点文字
-    drawText(c, this.text, this.x, this.y, null, selectedObject == this);
+    drawText(c, this.text, this.x, this.y, null, canvasData.selectedObject === this, canvasData);
 
     // 如果是接受状态，绘制双圈
     if (this.isAcceptState) {
@@ -495,7 +495,6 @@ Node.prototype.draw = function(c) {
         c.stroke();
     }
 };
-
 
 Node.prototype.closestPointOnCircle = function(x, y) {
 	var dx = x - this.x;
@@ -560,18 +559,18 @@ SelfLink.prototype.getEndPointsAndCircle = function() {
 	};
 };
 
-SelfLink.prototype.draw = function(c) {
-	var stuff = this.getEndPointsAndCircle();
-	// draw arc
-	c.beginPath();
-	c.arc(stuff.circleX, stuff.circleY, stuff.circleRadius, stuff.startAngle, stuff.endAngle, false);
-	c.stroke();
-	// draw the text on the loop farthest from the node
-	var textX = stuff.circleX + stuff.circleRadius * Math.cos(this.anchorAngle);
-	var textY = stuff.circleY + stuff.circleRadius * Math.sin(this.anchorAngle);
-	drawText(c, this.text, textX, textY, this.anchorAngle, selectedObject == this);
-	// draw the head of the arrow
-	drawArrow(c, stuff.endX, stuff.endY, stuff.endAngle + Math.PI * 0.4);
+SelfLink.prototype.draw = function(c, canvasData) {
+    var stuff = this.getEndPointsAndCircle();
+    // 绘制弧线
+    c.beginPath();
+    c.arc(stuff.circleX, stuff.circleY, stuff.circleRadius, stuff.startAngle, stuff.endAngle, false);
+    c.stroke();
+    // 绘制文字
+    var textX = stuff.circleX + stuff.circleRadius * Math.cos(this.anchorAngle);
+    var textY = stuff.circleY + stuff.circleRadius * Math.sin(this.anchorAngle);
+    drawText(c, this.text, textX, textY, this.anchorAngle, canvasData.selectedObject === this, canvasData);
+    // 绘制箭头
+    drawArrow(c, stuff.endX, stuff.endY, stuff.endAngle + Math.PI * 0.4);
 };
 
 SelfLink.prototype.containsPoint = function(x, y) {
@@ -763,8 +762,8 @@ function canvasHasFocus() {
 	return (document.activeElement || document.body) == document.body;
 }
 
-function drawText(c, originalText, x, y, angleOrNull, isSelected) {
-    text = convertLatexShortcuts(originalText);
+function drawText(c, originalText, x, y, angleOrNull, isSelected, canvasData) {
+    var text = convertLatexShortcuts(originalText);
     c.font = '20px "Times New Roman", serif';
     var width = c.measureText(text).width;
 
@@ -795,7 +794,6 @@ function drawText(c, originalText, x, y, angleOrNull, isSelected) {
     }
 }
 
-
 var caretTimer;
 var caretVisible = true;
 
@@ -806,8 +804,8 @@ function resetCaret() {
         draw();
     }, 500);
     canvasData.caretVisible = true;
+    draw(); // 立即重绘以显示光标
 }
-
 
 var canvas;
 var nodeRadius = 30;
@@ -862,12 +860,6 @@ function drawUsing(c) {
     c.restore();
 }
 
-
-function draw() {
-	drawUsing(canvas.getContext('2d'));
-	saveBackup();
-}
-
 function selectObject(x, y) {
 	for(var i = 0; i < nodes.length; i++) {
 		if(nodes[i].containsPoint(x, y)) {
@@ -901,9 +893,9 @@ window.onload = function() {
 	restoreBackup();
 	draw();
 
-	canvas.onmousedown = function(e) {
-		var mouse = crossBrowserRelativeMousePos(e);
-		selectedObject = selectObject(mouse.x, mouse.y);
+    canvas.onmousedown = function(e) {
+        var mouse = crossBrowserRelativeMousePos(e);
+        canvasData.selectedObject = selectObject(mouse.x, mouse.y);
 		movingObject = false;
 		originalClick = mouse;
 	
@@ -1112,11 +1104,11 @@ document.onkeydown = function(e) {
 		// don't read keystrokes when other things have focus
 		return true;
 	} else if(key == 8) { // backspace key
-		if(selectedObject != null && 'text' in selectedObject) {
-			selectedObject.text = selectedObject.text.substr(0, selectedObject.text.length - 1);
-			resetCaret();
-			draw();
-		}
+        if (canvasData.selectedObject != null && 'text' in canvasData.selectedObject) {
+            canvasData.selectedObject.text += String.fromCharCode(key);
+            resetCaret();
+            draw();
+        }        
 
 		// backspace is a shortcut for the back button, but do NOT want to change pages
 		return false;
@@ -1722,7 +1714,7 @@ function initCanvas(canvasId) {
         c.clearRect(0, 0, canvas.width, canvas.height);
         c.save();
         c.translate(0.5, 0.5);
-
+    
         // 绘制节点
         for (let i = 0; i < canvasData.nodes.length; i++) {
             c.lineWidth = 1;
@@ -1731,7 +1723,7 @@ function initCanvas(canvasId) {
             c.strokeStyle = isSelectedNode ? 'blue' : 'black';
             node.draw(c, canvasData);
         }
-
+    
         // 绘制连接线
         for (let i = 0; i < canvasData.links.length; i++) {
             c.lineWidth = 1;
@@ -1741,7 +1733,7 @@ function initCanvas(canvasId) {
             c.fillStyle = isSelectedLink ? 'blue' : 'black';
             link.draw(c, canvasData);
         }
-
+    
         // 绘制当前连接线
         if (canvasData.currentLink != null) {
             c.lineWidth = 1;
@@ -1749,7 +1741,7 @@ function initCanvas(canvasId) {
             c.fillStyle = 'black';
             canvasData.currentLink.draw(c, canvasData);
         }
-
+    
         // 绘制选择框
         if (canvasData.selectionStart && canvasData.selectionEnd) {
             c.strokeStyle = 'rgba(0, 0, 255, 0.5)';
@@ -1761,9 +1753,9 @@ function initCanvas(canvasId) {
                 canvasData.selectionEnd.y - canvasData.selectionStart.y
             );
         }
-
+    
         c.restore();
-    }
+    }    
 
     // 重置光标闪烁
     function resetCaret() {
@@ -1773,6 +1765,7 @@ function initCanvas(canvasId) {
             draw();
         }, 500);
         canvasData.caretVisible = true;
+        draw(); // 立即重绘以显示光标
     }
 
     // 选择对象
