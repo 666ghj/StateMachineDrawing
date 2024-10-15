@@ -237,12 +237,23 @@ textarea {
         <a href="javascript:resetCanvasSize()" style="font-weight: bolder;">重置尺寸</a>
     </p>
     <div style="margin-top: 10px;">
-        <p class="center" style="margin: 0;">
+        <!-- <p class="center" style="margin: 0;">
             导出为:&nbsp;
             <a href="javascript:saveAsPNG()">PNG</a> | 
             <a href="javascript:saveAsSVG()">SVG</a> | 
             <a href="javascript:saveAsLaTeX()">LaTeX</a> 
+        </p> -->
+        <p class="center" style="margin: 0;">
+            导出为:&nbsp;
+            <a href="javascript:showExportAlert()">PNG</a> | 
+            <a href="javascript:showExportAlert()">SVG</a> | 
+            <a href="javascript:showExportAlert()">LaTeX</a> 
         </p>
+        <script>
+            function showExportAlert() {
+                alert('引入多画布功能坏掉懒得修了，截图暂时够用\n欢迎来仓库做贡献修好这个功能吧🥰');
+            }
+        </script>
         
         <div class="center" style="text-align: center; padding: 20px;margin: 0;">
             <p style="margin: 0; font-size: larger; font-weight: bolder;margin-top: 5px;">使用说明</p>
